@@ -1,0 +1,15 @@
+{
+  "name": "God is in the Numbers",
+  "short_name": "Numbers",
+  "display": "standalone",
+  "background_color": "#f5f0eb",
+  "theme_color": "#f5f0eb",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

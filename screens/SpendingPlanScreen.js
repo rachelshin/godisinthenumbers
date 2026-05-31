@@ -1,0 +1,341 @@
+// screens/SpendingPlanScreen.js
+import React, { useState, useMemo } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { colors } from '../styles/shared';
+import layout from '../styles/layout';
+import styles from '../styles/plan';
+import historyStyles from '../styles/history';
+import { TIER_META } from '../data/constants';
+import { PLAN_CATEGORY_COLORS, BDA_PLAN_CATEGORY_COLORS } from '../styles/numbers';
+import ManageCategoriesModal from '../components/ManageCategoriesModal';
+import BillsScreen from './BillsScreen';
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+  'July','August','September','October','November','December'];
+
+const MAIN_TIER = 'Realistic';
+const ALT_TIERS = ['Ideal', 'Mini'];
+
+export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePlan, onUpdateCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [] }) {
+  const activePlanColors = mode === 'business' ? BDA_PLAN_CATEGORY_COLORS : PLAN_CATEGORY_COLORS;
+  const [altTier, setAltTier] = useState(null);
+  const [billsVisible, setBillsVisible] = useState(false);
+  const [billToEdit, setBillToEdit] = useState(null);
+  const [expandedCategory, setExpandedCategory] = useState(null);
+  const [editingCell, setEditingCell] = useState(null);
+  const [cellValue, setCellValue] = useState('');
+  const [manageModal, setManageModal] = useState(false);
+
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
+  const isCurrentViewMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
+
+  const prevViewMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextViewMonth = () => {
+    if (isCurrentViewMonth) return;
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const planKey = (catName, sub) => `${catName} > ${sub}`;
+
+  const monthlyActual = useMemo(() => {
+    const result = {};
+    purchases.forEach(p => {
+      const d = new Date(p.date);
+      if (d.getMonth() !== viewMonth || d.getFullYear() !== viewYear) return;
+      if (!p.subcategory) return;
+      const k = planKey(p.category, p.subcategory);
+      result[k] = (result[k] || 0) + p.amount;
+    });
+    return result;
+  }, [purchases, viewMonth, viewYear]);
+  const isIncomeCat = (name) => name === 'Income' || name === 'Revenue';
+  const actualCatTotal = (cat) =>
+    cat.subcategories.reduce((sum, sub) => sum + (monthlyActual[planKey(cat.name, sub)] || 0), 0);
+  const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  const subTotal = (tier, cat) =>
+    cat.subcategories.reduce((sum, sub) => {
+      const v = parseFloat(plan[tier]?.[planKey(cat.name, sub)] || '0');
+      return sum + (isNaN(v) ? 0 : v);
+    }, 0);
+
+  const grandTotal = (tier) =>
+    categories
+      .filter(cat => cat.name !== 'Income' && cat.name !== 'Revenue')
+      .reduce((sum, cat) => sum + subTotal(tier, cat), 0);
+
+  const openCell = (tier, catName, sub) => {
+    setEditingCell({ tier, catName, sub });
+    setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
+  };
+
+  const commitCell = () => {
+    if (!editingCell) return;
+    const { tier, catName, sub } = editingCell;
+    const raw = cellValue.replace(/[^0-9.]/g, '');
+    onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [planKey(catName, sub)]: raw } });
+    setEditingCell(null);
+  };
+
+  const activeTier = altTier ?? MAIN_TIER;
+  const meta = TIER_META[activeTier];
+  const accentColor = altTier ? meta.color : colors.rose;
+
+  const renderPlanList = (tier) => {
+    const totalActual = categories
+      .filter(cat => !isIncomeCat(cat.name))
+      .reduce((sum, cat) => sum + actualCatTotal(cat), 0);
+    const totalBudgeted = grandTotal(tier);
+    return (
+    <>
+      <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>
+        actual / planned
+      </Text>
+      {categories.map((cat, index) => {
+        const palette = activePlanColors[index % activePlanColors.length];
+        const isExpanded = expandedCategory === cat.name;
+        const catTotal = subTotal(tier, cat);
+
+        const filledSubs = cat.subcategories.filter(sub => {
+          const v = parseFloat(plan[tier]?.[planKey(cat.name, sub)] || '0');
+          const a = monthlyActual[planKey(cat.name, sub)] || 0;
+          return v > 0 || a > 0;
+        });
+        const catActual = actualCatTotal(cat);
+        const catOverBudget = !isIncomeCat(cat.name) && catActual > catTotal && catTotal > 0;
+
+        return (
+          <View key={cat.id}>
+            <TouchableOpacity
+              style={[styles.catRow, { backgroundColor: palette.bg, borderWidth: 1, borderColor: palette.text + '30' }]}
+              onPress={() => setExpandedCategory(isExpanded ? null : cat.name)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.catName, { color: palette.text }]}>{cat.name}</Text>
+              <Text style={[styles.catTotal, { color: catOverBudget ? colors.roseMuted : catTotal > 0 || catActual > 0 ? palette.text : palette.text + '55' }]}>
+                {catActual > 0 && catTotal > 0
+                  ? `$${fmt(catActual)} / $${fmt(catTotal)}`
+                  : catTotal > 0
+                  ? `$${fmt(catTotal)}`
+                  : catActual > 0
+                  ? `$${fmt(catActual)}`
+                  : '—'}
+              </Text>
+              <Text style={[styles.catChevron, { color: palette.text }]}>{isExpanded ? '∨' : '›'}</Text>
+            </TouchableOpacity>
+
+            {/* Always-visible filled subcategories when collapsed */}
+            {!isExpanded && filledSubs.map(sub => {
+              const val = plan[tier]?.[planKey(cat.name, sub)] || '';
+              const actual = monthlyActual[planKey(cat.name, sub)] || 0;
+              const budget = parseFloat(val) || 0;
+              const matchingBills = bills.filter(b => b.category === cat.name && b.subcategory === sub);
+              const hasBills = matchingBills.length > 0;
+              const billsSubTotal = hasBills ? matchingBills.reduce((s, b) => s + b.amount, 0) : 0;
+              const displayBudget = hasBills ? billsSubTotal : budget;
+              const overBudget = !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
+              return (
+                <TouchableOpacity
+                  key={sub}
+                  style={historyStyles.summaryRow}
+                  onPress={() => {
+                    if (hasBills) { setBillToEdit(null); setBillsVisible(true); }
+                    else openCell(tier, cat.name, sub);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={historyStyles.summarySubcat}>{sub}</Text>
+                  {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
+                  <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.roseMuted : palette.text }]}>
+                    {displayBudget > 0
+                      ? `$${fmt(actual)} / $${fmt(displayBudget)}`
+                      : `$${fmt(actual)}`}
+                  </Text>
+                  <Text style={historyStyles.editHint}>Edit</Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* Expanded: all subcategories for editing */}
+            {isExpanded && cat.subcategories.map(sub => {
+              const val = plan[tier]?.[planKey(cat.name, sub)] || '';
+              const actual = monthlyActual[planKey(cat.name, sub)] || 0;
+              const budget = parseFloat(val) || 0;
+              const overBudget = !isIncomeCat(cat.name) && actual > 0 && budget > 0 && actual > budget;
+              const hasBill = bills.some(b => b.category === cat.name && b.subcategory === sub);
+              const actualColor = overBudget ? colors.roseMuted : palette.text;
+              return (
+                <TouchableOpacity
+                  key={sub}
+                  style={styles.subRow}
+                  onPress={() => openCell(tier, cat.name, sub)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.subName}>{sub}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
+                    {actual > 0 && (
+                      <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
+                    )}
+                    {actual > 0 && val ? (
+                      <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
+                    ) : null}
+                    <Text style={[styles.subAmount, { color: val ? (actual > 0 ? colors.textLight : palette.text) : colors.textLight }]}>
+                      {val ? `$${fmt(parseFloat(val))}` : actual > 0 ? '' : 'tap to enter'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        );
+      })}
+
+      <View style={[styles.totalRow, { borderTopColor: accentColor }]}>
+        <Text style={styles.totalLabel}>Total</Text>
+        <Text style={[styles.totalAmount, { color: accentColor }]}>
+          {totalActual > 0 && totalBudgeted > 0
+            ? `$${fmt(totalActual)} / $${fmt(totalBudgeted)}`
+            : totalBudgeted > 0
+            ? `$${fmt(totalBudgeted)}`
+            : `$${fmt(totalActual)}`}
+        </Text>
+      </View>
+    </>
+    );
+  };
+
+  const renderEditModal = (tintColor) => (
+    <Modal visible={!!editingCell} transparent animationType="fade">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={layout.modalOverlay}>
+        <View style={layout.modalBox}>
+          {editingCell && (
+            <>
+              <Text style={styles.modalSub}>{editingCell.sub}</Text>
+              <Text style={styles.modalCat}>{editingCell.catName}{altTier ? ` · ${meta.label}` : ''}</Text>
+              <TextInput
+                style={styles.modalAmountInput}
+                value={cellValue}
+                onChangeText={setCellValue}
+                keyboardType="decimal-pad"
+                placeholder=""
+                placeholderTextColor={colors.textLight}
+                textAlign="center"
+              />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => setEditingCell(null)}>
+                  <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: tintColor, flex: 2 }]} onPress={commitCell}>
+                  <Text style={{ color: colors.surface, fontWeight: '600' }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+
+  // ── Bills sub-screen ─────────────────────────────────────────
+
+  if (billsVisible) {
+    return (
+      <BillsScreen
+        categories={categories}
+        bills={bills}
+        onAdd={onAddBill}
+        onUpdate={onUpdateBill}
+        onDelete={onDeleteBill}
+        onBack={() => { setBillsVisible(false); setBillToEdit(null); }}
+        initialEditBill={billToEdit}
+      />
+    );
+  }
+
+  const monthNav = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, paddingVertical: 8 }}>
+      <TouchableOpacity onPress={prevViewMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Text style={{ fontSize: 20, color: colors.textLight }}>‹</Text>
+      </TouchableOpacity>
+      <Text style={{ fontSize: 13, color: colors.textMid, letterSpacing: 0.5, minWidth: 130, textAlign: 'center' }}>
+        {MONTH_NAMES[viewMonth]} {viewYear}
+      </Text>
+      <TouchableOpacity onPress={nextViewMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} disabled={isCurrentViewMonth}>
+        <Text style={{ fontSize: 20, color: isCurrentViewMonth ? colors.borderMuted : colors.textLight }}>›</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+
+  // ── Alternate tier sub-screen ────────────────────────────────
+
+  if (altTier) {
+    return (
+      <View style={layout.screen}>
+        <View style={styles.altHeader}>
+          <TouchableOpacity onPress={() => { setAltTier(null); setExpandedCategory(null); }}>
+            <Text style={styles.altBackLabel}>‹ Plan</Text>
+          </TouchableOpacity>
+          <Text style={[styles.altTierLabel, { color: meta.color }]} numberOfLines={1} adjustsFontSizeToFit>{meta.label} Spending Plan</Text>
+          <Text style={[styles.altTotal, { color: meta.color }]}>
+            ${grandTotal(altTier).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+          </Text>
+        </View>
+        {monthNav}
+        <ScrollView style={layout.scroll} contentContainerStyle={layout.scrollContent}>
+          {renderPlanList(altTier)}
+        </ScrollView>
+        {renderEditModal(meta.color)}
+      </View>
+    );
+  }
+
+  // ── Main plan view (Realistic) ───────────────────────────────
+
+  return (
+    <View style={layout.screen}>
+      <View style={styles.planHeader}>
+        <View style={styles.planHeaderLinks}>
+          {ALT_TIERS.map(t => (
+            <TouchableOpacity key={t} onPress={() => { setAltTier(t); setExpandedCategory(null); }}>
+              <Text style={styles.altLinkText}>{t} plan ›</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.planTitle} numberOfLines={1} adjustsFontSizeToFit>
+          {mode === 'business' ? 'Business Spending Plan' : 'Monthly Spending Plan'}
+        </Text>
+        {monthNav}
+      </View>
+
+      <ScrollView style={layout.scroll} contentContainerStyle={[layout.scrollContent, { paddingTop: 12 }]}>
+        {renderPlanList(MAIN_TIER)}
+        <TouchableOpacity style={[layout.ghostButton, { marginTop: 8 }]} onPress={() => setManageModal(true)}>
+          <Text style={layout.ghostButtonText}>Edit categories</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[layout.ghostButton, { marginTop: 0 }]} onPress={() => setBillsVisible(true)}>
+          <Text style={[layout.ghostButtonText, { color: colors.bill }]}>Recurring bills ›</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {renderEditModal(colors.rose)}
+
+      <ManageCategoriesModal
+        visible={manageModal}
+        categories={categories}
+        onSave={(cats) => { onUpdateCategories(cats); setManageModal(false); }}
+        onClose={() => setManageModal(false)}
+      />
+    </View>
+  );
+}

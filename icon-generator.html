@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Icon Generator — God is in the Numbers</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #1a1818;
+      gap: 24px;
+      font-family: -apple-system, sans-serif;
+      color: #b0a09e;
+    }
+    canvas { border-radius: 22%; box-shadow: 0 16px 56px rgba(0,0,0,0.55); }
+    .row { display: flex; gap: 12px; }
+    button {
+      padding: 12px 22px;
+      background: #9e6b72;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { background: #b8949a; }
+    p { font-size: 12px; margin: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="1024" height="1024" style="width:256px;height:256px"></canvas>
+  <div class="row">
+    <button onclick="dl('icon')">Download icon.png</button>
+    <button onclick="dl('adaptive-icon')">Download adaptive-icon.png</button>
+  </div>
+  <p>Replace both files in your assets/ folder.</p>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx    = canvas.getContext('2d');
+    const W = 1024, H = 1024;
+
+    // ── Background ────────────────────────────────────────────────
+    ctx.fillStyle = '#f5f0eb';
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle warm vignette at edges
+    const vig = ctx.createRadialGradient(W/2, H/2, 300, W/2, H/2, 700);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(60,40,40,0.08)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Infinity symbol as a thick stroked figure-8 path ─────────
+    // Two bezier loops meeting at center (512, 502)
+    const cx = 512, cy = 502;
+    const ex = 300;   // horizontal reach from center to loop edge
+    const ey = 155;   // vertical reach (half-height of loops)
+    // how far the control points pull the curve toward the loop top/bottom
+    const cp = 0.58;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(120, 70, 80, 0.28)';
+    ctx.shadowBlur  = 52;
+    ctx.shadowOffsetY = 16;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    // right loop — upper arc
+    ctx.bezierCurveTo(
+      cx + ex * cp, cy - ey,
+      cx + ex,      cy - ey,
+      cx + ex,      cy
+    );
+    // right loop — lower arc (back to center)
+    ctx.bezierCurveTo(
+      cx + ex,      cy + ey,
+      cx + ex * cp, cy + ey,
+      cx,           cy
+    );
+    // left loop — lower arc
+    ctx.bezierCurveTo(
+      cx - ex * cp, cy + ey,
+      cx - ex,      cy + ey,
+      cx - ex,      cy
+    );
+    // left loop — upper arc (back to center)
+    ctx.bezierCurveTo(
+      cx - ex,      cy - ey,
+      cx - ex * cp, cy - ey,
+      cx,           cy
+    );
+
+    ctx.strokeStyle = '#9e6b72';
+    ctx.lineWidth   = 92;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
+
+    // ── Crossing notch — makes center read as a proper crossing ──
+    // Draw a thin background-colored oval where the lines meet
+    ctx.shadowColor = 'transparent';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 28, 46, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#f5f0eb';
+    ctx.fill();
+
+    ctx.restore();
+
+    function dl(name) {
+      const a = document.createElement('a');
+      a.download = name + '.png';
+      a.href     = canvas.toDataURL('image/png');
+      a.click();
+    }
+  </script>
+</body>
+</html>
