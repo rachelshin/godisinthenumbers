@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Modal, TextInput, KeyboardAvoidingView, Platform,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { colors } from '../styles/shared';
 import layout from '../styles/layout';
@@ -28,6 +28,7 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
   const [editingCell, setEditingCell] = useState(null);
   const [cellValue, setCellValue] = useState('');
   const [manageModal, setManageModal] = useState(false);
+  const [infoModal, setInfoModal] = useState(false);
 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -306,11 +307,16 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
     <View style={layout.screen}>
       <View style={styles.planHeader}>
         <View style={styles.planHeaderLinks}>
-          {ALT_TIERS.map(t => (
-            <TouchableOpacity key={t} onPress={() => { setAltTier(t); setExpandedCategory(null); }}>
-              <Text style={styles.altLinkText}>{t} plan ›</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity onPress={() => setInfoModal(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.infoIcon}>ⓘ</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 14 }}>
+            {ALT_TIERS.map(t => (
+              <TouchableOpacity key={t} onPress={() => { setAltTier(t); setExpandedCategory(null); }}>
+                <Text style={styles.altLinkText}>{t} plan ›</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         <Text style={styles.planTitle} numberOfLines={1} adjustsFontSizeToFit>
           {mode === 'business' ? 'Business Spending Plan' : 'Monthly Spending Plan'}
@@ -336,6 +342,23 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
         onSave={(cats) => { onUpdateCategories(cats); setManageModal(false); }}
         onClose={() => setManageModal(false)}
       />
+
+      <Modal visible={infoModal} transparent animationType="fade" onRequestClose={() => setInfoModal(false)}>
+        <TouchableOpacity style={styles.infoOverlay} activeOpacity={1} onPress={() => setInfoModal(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.infoSheet} onPress={() => {}}>
+            <Text style={styles.infoTitle}>Support this app 💛</Text>
+            <Text style={styles.infoBody}>
+              Love using God is in the Numbers? Help get it into the App Store so more people can find it.
+            </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('https://ko-fi.com/nextrightthing')}>
+              <Text style={styles.infoLink}>ko-fi.com/nextrightthing →</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.infoDismiss} onPress={() => setInfoModal(false)}>
+              <Text style={styles.infoDismissText}>Close</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }

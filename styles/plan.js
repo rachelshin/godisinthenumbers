@@ -54,8 +54,8 @@ export default StyleSheet.create({
   },
   planHeaderLinks: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 14,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
   altLinkText: {
@@ -195,5 +195,54 @@ export default StyleSheet.create({
     marginBottom: 24,
     letterSpacing: 2,
     outlineWidth: 0,
+  },
+
+  // ── Info icon ─────────────────────────────────────────────
+  infoIcon: {
+    fontSize: 15,
+    color: colors.textLight,
+    lineHeight: 20,
+  },
+
+  // ── Info modal ────────────────────────────────────────────
+  infoOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  infoSheet: {
+    backgroundColor: colors.bg,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+  },
+  infoTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.textDark,
+    marginBottom: 10,
+  },
+  infoBody: {
+    fontSize: 14,
+    color: colors.textMid,
+    lineHeight: 21,
+    marginBottom: 14,
+  },
+  infoLink: {
+    fontSize: 14,
+    color: colors.rose,
+    fontWeight: '500',
+    marginBottom: 20,
+    textDecorationLine: 'underline',
+  },
+  infoDismiss: {
+    alignSelf: 'flex-end',
+  },
+  infoDismissText: {
+    fontSize: 14,
+    color: colors.textLight,
   },
 });
