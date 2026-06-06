@@ -262,12 +262,23 @@ export function useAppData() {
   }, []);
 
   const deletePurchase = useCallback((id) => {
-    const next = purchasesRef.current.filter(p => p.id !== id);
-    purchasesRef.current = next;
-    setPurchases(next);
+    const entry = purchasesRef.current.find(p => p.id === id);
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
-    saveItem(keys.purchases, next);
-    if (userRef.current) fsDeletePurchase(userRef.current.uid, modeRef.current, id).catch(console.warn);
+    if (entry?.billId) {
+      // Soft-delete: keep in storage so autoEnterDueBills won't regenerate this entry
+      const softDeleted = { ...entry, deleted: true };
+      const next = purchasesRef.current.map(p => p.id === id ? softDeleted : p);
+      purchasesRef.current = next;
+      setPurchases(next);
+      saveItem(keys.purchases, next);
+      if (userRef.current) fsSetPurchase(userRef.current.uid, modeRef.current, softDeleted).catch(console.warn);
+    } else {
+      const next = purchasesRef.current.filter(p => p.id !== id);
+      purchasesRef.current = next;
+      setPurchases(next);
+      saveItem(keys.purchases, next);
+      if (userRef.current) fsDeletePurchase(userRef.current.uid, modeRef.current, id).catch(console.warn);
+    }
   }, []);
 
   const updatePurchase = useCallback((updated) => {
@@ -376,8 +387,10 @@ export function useAppData() {
     if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { bankBalance: next }).catch(console.warn);
   }, []);
 
+  const visiblePurchases = purchases.filter(p => !p.deleted);
+
   return {
-    mode, categories, plan, purchases, bankBalance, bills, sobriety,
+    mode, categories, plan, purchases, visiblePurchases, bankBalance, bills, sobriety,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,

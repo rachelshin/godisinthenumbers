@@ -33,7 +33,7 @@ const TABS = [
 
 export default function App() {
   const {
-    mode, categories, plan, purchases, bankBalance, bills, sobriety,
+    mode, categories, plan, purchases, visiblePurchases, bankBalance, bills, sobriety,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
@@ -63,8 +63,8 @@ export default function App() {
       ]);
     }
     const allEntries = [
-      ...personalPurchases.map(p => ({ ...p, _mode: 'Personal' })),
-      ...businessPurchases.map(p => ({ ...p, _mode: 'Business' })),
+      ...personalPurchases.filter(p => !p.deleted).map(p => ({ ...p, _mode: 'Personal' })),
+      ...businessPurchases.filter(p => !p.deleted).map(p => ({ ...p, _mode: 'Business' })),
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
     const rows = [['Date', 'Mode', 'Category', 'Subcategory', 'Amount', 'Income', 'Note']];
     allEntries.forEach(p => {
@@ -107,9 +107,9 @@ export default function App() {
       )}
 
       <View style={{ flex: 1 }}>
-        {tab === 'Today'         && <TodaysNumbersScreen mode={mode} onSwitchMode={switchMode} modeSwitching={modeSwitching} categories={categories} onAdd={addPurchase} onUpdateCategories={updateCategories} purchases={purchases} onDelete={deletePurchase} onUpdate={updatePurchase} bankBalance={bankBalance} onUpdateBankBalance={updateBankBalance} bills={bills} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
-        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={purchases} />}
-        {tab === 'Records'       && <RecordsScreen       mode={mode} purchases={purchases} categories={categories} onMonthView={setMonthViewData} bills={bills} onUpdate={updatePurchase} onDelete={deletePurchase} onAdd={addPurchase} onUpdateCategories={updateCategories} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
+        {tab === 'Today'         && <TodaysNumbersScreen mode={mode} onSwitchMode={switchMode} modeSwitching={modeSwitching} categories={categories} onAdd={addPurchase} onUpdateCategories={updateCategories} purchases={visiblePurchases} onDelete={deletePurchase} onUpdate={updatePurchase} bankBalance={bankBalance} onUpdateBankBalance={updateBankBalance} bills={bills} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
+        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} />}
+        {tab === 'Records'       && <RecordsScreen       mode={mode} purchases={visiblePurchases} categories={categories} onMonthView={setMonthViewData} bills={bills} onUpdate={updatePurchase} onDelete={deletePurchase} onAdd={addPurchase} onUpdateCategories={updateCategories} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
       </View>
 
       <View style={styles.tabBar}>
