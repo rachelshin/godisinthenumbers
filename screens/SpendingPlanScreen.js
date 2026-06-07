@@ -1,7 +1,7 @@
 // screens/SpendingPlanScreen.js
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, Alert,
   Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { colors } from '../styles/shared';
@@ -69,21 +69,42 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
       return sum + (isNaN(v) ? 0 : v);
     }, 0);
 
+  const catBudgetFor = (tier, cat) => {
+    const v = parseFloat(plan[tier]?.[cat.name] || '0');
+    return (!isNaN(v) && v > 0) ? v : null;
+  };
+
   const grandTotal = (tier) =>
     categories
       .filter(cat => cat.name !== 'Income' && cat.name !== 'Revenue')
-      .reduce((sum, cat) => sum + subTotal(tier, cat), 0);
+      .reduce((sum, cat) => sum + (catBudgetFor(tier, cat) ?? subTotal(tier, cat)), 0);
 
   const openCell = (tier, catName, sub) => {
     setEditingCell({ tier, catName, sub });
     setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
   };
 
+  const openCatBudget = (tier, catName) => {
+    setEditingCell({ tier, catName, sub: null });
+    setCellValue(plan[tier]?.[catName] || '');
+  };
+
   const commitCell = () => {
     if (!editingCell) return;
     const { tier, catName, sub } = editingCell;
     const raw = cellValue.replace(/[^0-9.]/g, '');
-    onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [planKey(catName, sub)]: raw } });
+    if (sub === null) {
+      const entered = parseFloat(raw) || 0;
+      const cat = categories.find(c => c.name === catName);
+      const subSum = subTotal(tier, cat);
+      if (entered > 0 && entered < subSum) {
+        Alert.alert('Budget too low', `Category budget must be at least $${fmt(subSum)} to cover your subcategory totals.`);
+        return;
+      }
+      onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [catName]: raw } });
+    } else {
+      onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [planKey(catName, sub)]: raw } });
+    }
     setEditingCell(null);
   };
 
@@ -104,13 +125,14 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
       {categories.map((cat, index) => {
         const palette = activePlanColors[index % activePlanColors.length];
         const isExpanded = expandedCategory === cat.name;
-        const catTotal = subTotal(tier, cat);
 
         const filledSubs = cat.subcategories.filter(sub => {
           const v = parseFloat(plan[tier]?.[planKey(cat.name, sub)] || '0');
           const a = monthlyActual[planKey(cat.name, sub)] || 0;
           return v > 0 || a > 0;
         });
+        const catBudget = catBudgetFor(tier, cat);
+        const catTotal = catBudget ?? subTotal(tier, cat);
         const catActual = actualCatTotal(cat);
         const catOverBudget = !isIncomeCat(cat.name) && catActual > catTotal && catTotal > 0;
 
@@ -165,6 +187,20 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
                 </TouchableOpacity>
               );
             })}
+
+            {/* Category-level budget cap row */}
+            {isExpanded && !isIncomeCat(cat.name) && (
+              <TouchableOpacity
+                style={styles.subRow}
+                onPress={() => openCatBudget(tier, cat.name)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.subName, { fontStyle: 'italic', color: colors.textMid }]}>Budget cap</Text>
+                <Text style={[styles.subAmount, { color: catBudget ? palette.text : colors.textLight }]}>
+                  {catBudget ? `$${fmt(catBudget)}` : 'tap to set'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Expanded: all subcategories for editing */}
             {isExpanded && cat.subcategories.map(sub => {
@@ -221,7 +257,7 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
         <View style={layout.modalBox}>
           {editingCell && (
             <>
-              <Text style={styles.modalSub}>{editingCell.sub}</Text>
+              <Text style={styles.modalSub}>{editingCell.sub ?? 'Budget cap'}</Text>
               <Text style={styles.modalCat}>{editingCell.catName}{altTier ? ` · ${meta.label}` : ''}</Text>
               <TextInput
                 style={styles.modalAmountInput}
