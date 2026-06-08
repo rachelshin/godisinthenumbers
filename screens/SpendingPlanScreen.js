@@ -144,7 +144,7 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
               activeOpacity={0.7}
             >
               <Text style={[styles.catName, { color: palette.text }]}>{cat.name}</Text>
-              <Text style={[styles.catTotal, { color: catOverBudget ? colors.roseMuted : catTotal > 0 || catActual > 0 ? palette.text : palette.text + '55' }]}>
+              <Text style={[styles.catTotal, { color: catOverBudget ? colors.rose : catTotal > 0 || catActual > 0 ? palette.text : palette.text + '55', fontWeight: catOverBudget ? '700' : 'normal' }]}>
                 {catActual > 0 && catTotal > 0
                   ? `$${fmt(catActual)} / $${fmt(catTotal)}`
                   : catTotal > 0
@@ -178,7 +178,7 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
                 >
                   <Text style={historyStyles.summarySubcat}>{sub}</Text>
                   {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
-                  <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.roseMuted : palette.text }]}>
+                  <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
                     {displayBudget > 0
                       ? `$${fmt(actual)} / $${fmt(displayBudget)}`
                       : `$${fmt(actual)}`}
@@ -209,7 +209,7 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
               const budget = parseFloat(val) || 0;
               const overBudget = !isIncomeCat(cat.name) && actual > 0 && budget > 0 && actual > budget;
               const hasBill = bills.some(b => b.category === cat.name && b.subcategory === sub);
-              const actualColor = overBudget ? colors.roseMuted : palette.text;
+              const actualColor = overBudget ? colors.rose : palette.text;
               return (
                 <TouchableOpacity
                   key={sub}
@@ -221,7 +221,7 @@ export default function SpendingPlanScreen({ mode, categories, plan, onUpdatePla
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
                     {actual > 0 && (
-                      <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
+                      <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>${fmt(actual)}</Text>
                     )}
                     {actual > 0 && val ? (
                       <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
