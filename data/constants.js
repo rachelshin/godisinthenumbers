@@ -164,19 +164,21 @@ export const TIER_META = {
 };
 
 export const STORAGE_KEYS = {
-  categories:   'numbers_categories',
-  plan:         'numbers_plan',
-  purchases:    'numbers_purchases',
-  bankBalance:  'numbers_bank_balance',
-  bills:        'numbers_bills',
+  categories:      'numbers_categories',
+  idealCategories: 'numbers_ideal_categories',
+  plan:            'numbers_plan',
+  purchases:       'numbers_purchases',
+  bankBalance:     'numbers_bank_balance',
+  bills:           'numbers_bills',
 };
 
 export const BDA_STORAGE_KEYS = {
-  categories:  'bda_categories',
-  plan:        'bda_plan',
-  purchases:   'bda_purchases',
-  bankBalance: 'bda_bank_balance',
-  bills:       'bda_bills',
+  categories:      'bda_categories',
+  idealCategories: 'bda_ideal_categories',
+  plan:            'bda_plan',
+  purchases:       'bda_purchases',
+  bankBalance:     'bda_bank_balance',
+  bills:           'bda_bills',
 };
 
 export const DEFAULT_BDA_CATEGORIES = [
