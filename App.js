@@ -21,18 +21,16 @@ import styles from './styles/app';
 import { useAppData } from './hooks/useAppData';
 import { useConnections } from './hooks/useConnections';
 import { IconUpload, IconLogOut } from './components/Icon';
-import TodaysNumbersScreen  from './screens/TodaysNumbersScreen';
-import SpendingPlanScreen   from './screens/SpendingPlanScreen';
-import RecordsScreen        from './screens/RecordsScreen';
-import AuthScreen           from './screens/AuthScreen';
-import ConnectionsScreen    from './screens/ConnectionsScreen';
-import ViewUserScreen       from './screens/ViewUserScreen';
+import TodaysNumbersScreen from './screens/TodaysNumbersScreen';
+import SpendingPlanScreen  from './screens/SpendingPlanScreen';
+import RecordsScreen       from './screens/RecordsScreen';
+import AuthScreen          from './screens/AuthScreen';
+import ViewUserScreen      from './screens/ViewUserScreen';
 
 const TABS = [
   { key: 'Today',         label: 'Today' },
   { key: 'Spending Plan', label: 'Spending Plan' },
   { key: 'Records',       label: 'Records' },
-  { key: 'People',        label: 'Support' },
 ];
 
 export default function App() {
@@ -52,7 +50,6 @@ export default function App() {
   const [tab, setTab] = useState('Today');
   const [monthViewData, setMonthViewData] = useState(null);
   const [viewingConnection, setViewingConnection] = useState(null);
-  const [viewingLoadFn, setViewingLoadFn] = useState(null);
 
   if (!loaded || !authReady) return <View style={styles.safe} />;
   if (!user) return <AuthScreen />;
@@ -116,21 +113,19 @@ export default function App() {
 
       <View style={{ flex: 1 }}>
         {tab === 'Today'         && <TodaysNumbersScreen mode={mode} onSwitchMode={switchMode} modeSwitching={modeSwitching} categories={categories} onAdd={addPurchase} onUpdateCategories={updateCategories} purchases={visiblePurchases} onDelete={deletePurchase} onUpdate={updatePurchase} bankBalance={bankBalance} onUpdateBankBalance={updateBankBalance} bills={bills} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
-        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} />}
+        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} connections={connections} onViewUser={(conn) => setViewingConnection(conn)} />}
         {tab === 'Records'       && <RecordsScreen       mode={mode} purchases={visiblePurchases} categories={categories} onMonthView={setMonthViewData} bills={bills} onUpdate={updatePurchase} onDelete={deletePurchase} onAdd={addPurchase} onUpdateCategories={updateCategories} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
-        {tab === 'People'        && <ConnectionsScreen   connections={{ ...connections, user, onViewUser: (conn, loadFn) => { setViewingConnection(conn); setViewingLoadFn(() => loadFn); } }} />}
       </View>
 
       {viewingConnection && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
           <ViewUserScreen
             connection={viewingConnection}
-            onClose={() => { setViewingConnection(null); setViewingLoadFn(null); }}
-            loadUserData={viewingLoadFn || connections.loadUserData}
+            onClose={() => setViewingConnection(null)}
+            loadUserData={connections.loadUserData}
             onRemoveConnection={async () => {
               await connections.stopViewing(viewingConnection.uid);
               setViewingConnection(null);
-              setViewingLoadFn(null);
             }}
           />
         </View>

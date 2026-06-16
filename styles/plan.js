@@ -215,9 +215,8 @@ export default StyleSheet.create({
   infoSheet: {
     backgroundColor: colors.bg,
     borderRadius: 16,
-    padding: 24,
     width: '100%',
-    maxWidth: 340,
+    maxHeight: '88%',
   },
   infoTitle: {
     fontSize: 17,
