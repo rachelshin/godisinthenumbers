@@ -20,12 +20,13 @@ import styles from './styles/app';
 
 import { useAppData } from './hooks/useAppData';
 import { useConnections } from './hooks/useConnections';
-import { IconUpload, IconLogOut } from './components/Icon';
+import { IconUpload } from './components/Icon';
 import TodaysNumbersScreen from './screens/TodaysNumbersScreen';
 import SpendingPlanScreen  from './screens/SpendingPlanScreen';
 import RecordsScreen       from './screens/RecordsScreen';
 import AuthScreen          from './screens/AuthScreen';
 import ViewUserScreen      from './screens/ViewUserScreen';
+import InfoModal           from './components/InfoModal';
 
 const TABS = [
   { key: 'Today',         label: 'Today' },
@@ -50,6 +51,7 @@ export default function App() {
   const [tab, setTab] = useState('Today');
   const [monthViewData, setMonthViewData] = useState(null);
   const [viewingConnection, setViewingConnection] = useState(null);
+  const [infoVisible, setInfoVisible] = useState(false);
 
   if (!loaded || !authReady) return <View style={styles.safe} />;
   if (!user) return <AuthScreen />;
@@ -96,16 +98,16 @@ export default function App() {
       {tab === 'Records' && (
         <View style={styles.header}>
           <View style={styles.headerSide}>
-            <TouchableOpacity onPress={handleExport} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <IconUpload size={20} color={colors.rose} />
+            <TouchableOpacity onPress={() => setInfoVisible(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={{ fontSize: 20, color: colors.textLight, lineHeight: 24 }}>ⓘ</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>
             {mode === 'business' ? 'Business Records' : 'Records'}
           </Text>
           <View style={styles.headerShareBtn}>
-            <TouchableOpacity onPress={handleSignOut} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <IconLogOut size={20} color={colors.textLight} />
+            <TouchableOpacity onPress={handleExport} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <IconUpload size={20} color={colors.rose} />
             </TouchableOpacity>
           </View>
         </View>
@@ -113,7 +115,7 @@ export default function App() {
 
       <View style={{ flex: 1 }}>
         {tab === 'Today'         && <TodaysNumbersScreen mode={mode} onSwitchMode={switchMode} modeSwitching={modeSwitching} categories={categories} onAdd={addPurchase} onUpdateCategories={updateCategories} purchases={visiblePurchases} onDelete={deletePurchase} onUpdate={updatePurchase} bankBalance={bankBalance} onUpdateBankBalance={updateBankBalance} bills={bills} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
-        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} connections={connections} onViewUser={(conn) => setViewingConnection(conn)} />}
+        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} />}
         {tab === 'Records'       && <RecordsScreen       mode={mode} purchases={visiblePurchases} categories={categories} onMonthView={setMonthViewData} bills={bills} onUpdate={updatePurchase} onDelete={deletePurchase} onAdd={addPurchase} onUpdateCategories={updateCategories} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
       </View>
 
@@ -130,6 +132,14 @@ export default function App() {
           />
         </View>
       )}
+
+      <InfoModal
+        visible={infoVisible}
+        onClose={() => setInfoVisible(false)}
+        connections={connections}
+        onSignOut={handleSignOut}
+        onViewUser={(conn) => setViewingConnection(conn)}
+      />
 
       <View style={styles.tabBar}>
         {TABS.map(t => (
