@@ -1,6 +1,8 @@
 // styles/numbers.js
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, type } from './shared';
+
+const web = Platform.OS === 'web';
 
 // More saturated pastel palette — joyful but still soft
 export const INCOME_COLOR = { bg: '#FEFAE0', text: '#8B6914' }; // warm gold — Income only
@@ -23,6 +25,7 @@ export const CATEGORY_COLORS = [
   { bg: '#DCF5D6', text: '#2A7A1A' }, // grass green     — Investments
   { bg: '#E8D6F0', text: '#6A1A9E' }, // indigo          — Taxes
   { bg: '#FFF0D6', text: '#A06800' }, // marigold gold   — Debt Repayment
+  { bg: '#D0EAE4', text: '#1A7A6A' }, // sea green       — Savings
 ];
 
 // Deeper pastels for the spending plan — same palette, more saturated, still calm
@@ -110,16 +113,42 @@ export default StyleSheet.create({
     marginTop: 16,
     fontStyle: 'italic',
   },
-  tagline: {
-    textAlign: 'center',
-    fontSize: 26,
-    fontWeight: '300',
-    color: colors.textDark,
-    letterSpacing: 0.8,
-    marginBottom: 14,
-  },
-
   // ── Bank balance ─────────────────────────────────────────
+  eyebrowTagline: {
+    textAlign: 'center',
+    fontSize: type.xs,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    color: colors.textLight,
+    marginBottom: 12,
+  },
+  statCard: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  statCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+    marginVertical: 2,
+  },
+  sobrietyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 28,
+  },
   balanceRow: {
     flexDirection: 'row',
     marginBottom: 32,
@@ -166,6 +195,7 @@ export default StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     maxHeight: '80%',
+    ...(web && { maxWidth: 480, width: '100%', alignSelf: 'center' }),
   },
   sheetTitle: {
     fontSize: type.xl,

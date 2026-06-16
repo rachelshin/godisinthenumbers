@@ -1,11 +1,26 @@
 // styles/app.js
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, type } from './shared';
+
+const web = Platform.OS === 'web';
 
 export default StyleSheet.create({
   safe: {
     flex: 1,
+    backgroundColor: web ? '#e6ded6' : colors.bg,
+    ...(web && { alignItems: 'center' }),
+  },
+  // On web/desktop, constrain the app to a centered phone-width column.
+  appColumn: {
+    flex: 1,
+    width: '100%',
     backgroundColor: colors.bg,
+    ...(web && {
+      maxWidth: 480,
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
+      borderColor: colors.border,
+    }),
   },
   loading: {
     flex: 1,

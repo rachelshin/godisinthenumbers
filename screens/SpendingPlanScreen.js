@@ -12,6 +12,8 @@ import { TIER_META } from '../data/constants';
 import { PLAN_CATEGORY_COLORS, BDA_PLAN_CATEGORY_COLORS } from '../styles/numbers';
 import ManageCategoriesModal from '../components/ManageCategoriesModal';
 import BillsScreen from './BillsScreen';
+import SavingsGoalsScreen from './SavingsGoalsScreen';
+import { IconTarget } from '../components/Icon';
 
 const MONTH_NAMES = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];
@@ -19,7 +21,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 const MAIN_TIER = 'Realistic';
 const ALT_TIERS = ['Ideal', 'Mini'];
 
-export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, onUpdatePlan, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [] }) {
+export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, onUpdatePlan, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
   const activePlanColors = mode === 'business' ? BDA_PLAN_CATEGORY_COLORS : PLAN_CATEGORY_COLORS;
   const [altTier, setAltTier] = useState(null);
   const [billsVisible, setBillsVisible] = useState(false);
@@ -29,6 +31,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const [cellValue, setCellValue] = useState('');
   const [manageModal, setManageModal] = useState(false);
   const [idealManageModal, setIdealManageModal] = useState(false);
+  const [savingsGoalsVisible, setSavingsGoalsVisible] = useState(false);
 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -207,7 +210,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 onPress={() => openCatBudget(tier, cat.name)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.subName, { fontStyle: 'italic', color: colors.textMid }]}>Budget cap</Text>
+                <Text style={[styles.subName, { fontStyle: 'italic', color: colors.textMid }]}>Category cap</Text>
                 <Text style={[styles.subAmount, { color: catBudget ? palette.text : colors.textLight }]}>
                   {catBudget ? `$${fmt(catBudget)}` : 'tap to set'}
                 </Text>
@@ -271,7 +274,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         <View style={layout.modalBox}>
           {editingCell && (
             <>
-              <Text style={styles.modalSub}>{editingCell.sub ?? 'Budget cap'}</Text>
+              <Text style={styles.modalSub}>{editingCell.sub ?? 'Category cap'}</Text>
               <Text style={styles.modalCat}>{editingCell.catName}{altTier ? ` · ${meta.label}` : ''}</Text>
               <TextInput
                 style={styles.modalAmountInput}
@@ -309,6 +312,18 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         onDelete={onDeleteBill}
         onBack={() => { setBillsVisible(false); setBillToEdit(null); }}
         initialEditBill={billToEdit}
+      />
+    );
+  }
+
+  if (savingsGoalsVisible) {
+    return (
+      <SavingsGoalsScreen
+        categories={categories}
+        purchases={purchases}
+        savingsGoals={savingsGoals}
+        onUpdateSavingsGoals={onUpdateSavingsGoals}
+        onBack={() => setSavingsGoalsVisible(false)}
       />
     );
   }
@@ -371,7 +386,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   return (
     <View style={layout.screen}>
       <View style={styles.planHeader}>
-        <View style={[styles.planHeaderLinks, { justifyContent: 'flex-end' }]}>
+        <View style={[styles.planHeaderLinks, { justifyContent: 'space-between' }]}>
+          <TouchableOpacity
+            onPress={() => setSavingsGoalsVisible(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <IconTarget size={18} color={colors.textLight} />
+          </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 14 }}>
             {ALT_TIERS.map(t => (
               <TouchableOpacity key={t} onPress={() => {

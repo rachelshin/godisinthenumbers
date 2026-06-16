@@ -1,6 +1,8 @@
 // styles/history.js
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, type } from './shared';
+
+const web = Platform.OS === 'web';
 
 export default StyleSheet.create({
   summaryCard: {
@@ -165,6 +167,7 @@ export default StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     maxHeight: '80%',
+    ...(web && { maxWidth: 480, width: '100%', alignSelf: 'center' }),
   },
   editSheetTitle: {
     fontSize: type.lg,

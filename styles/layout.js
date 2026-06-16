@@ -1,6 +1,8 @@
 // styles/layout.js
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, type } from './shared';
+
+const web = Platform.OS === 'web';
 
 export default StyleSheet.create({
 
@@ -149,6 +151,7 @@ export default StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     width: '88%',
+    ...(web && { maxWidth: 420 }),
   },
   modalTitle: {
     fontSize: type.md,

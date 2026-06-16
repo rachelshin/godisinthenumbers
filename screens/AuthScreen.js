@@ -12,6 +12,8 @@ import {
 } from 'firebase/auth';
 import { colors } from '../styles/shared';
 
+const web = Platform.OS === 'web';
+
 // A curated selection from the category palette
 const PALETTE = [
   '#7B3FA0', // violet
@@ -94,6 +96,7 @@ export default function AuthScreen() {
       style={s.container}
     >
       <ScrollView
+        style={s.scrollOuter}
         contentContainerStyle={s.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -167,13 +170,19 @@ export default function AuthScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: web ? '#e6ded6' : colors.bg,
+    ...(web && { alignItems: 'center' }),
   },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 28,
     paddingVertical: 48,
+  },
+  scrollOuter: {
+    width: '100%',
+    backgroundColor: colors.bg,
+    ...(web && { maxWidth: 480, alignSelf: 'center' }),
   },
   paletteRow: {
     flexDirection: 'row',

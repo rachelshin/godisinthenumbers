@@ -138,6 +138,11 @@ export const DEFAULT_CATEGORIES = [
     name: 'Debt Repayment',
     subcategories: ["Payments"],
   },
+  {
+    id: 'savings',
+    name: 'Savings',
+    subcategories: ['Emergency Fund', 'Vacation Fund', 'Home Fund', 'Retirement'],
+  },
 ];
 
 export const PLAN_TIERS = ['Ideal', 'Realistic', 'Mini'];
@@ -170,6 +175,7 @@ export const STORAGE_KEYS = {
   purchases:       'numbers_purchases',
   bankBalance:     'numbers_bank_balance',
   bills:           'numbers_bills',
+  savingsGoals:    'numbers_savings_goals',
 };
 
 export const BDA_STORAGE_KEYS = {
@@ -179,6 +185,7 @@ export const BDA_STORAGE_KEYS = {
   purchases:       'bda_purchases',
   bankBalance:     'bda_bank_balance',
   bills:           'bda_bills',
+  savingsGoals:    'bda_savings_goals',
 };
 
 export const DEFAULT_BDA_CATEGORIES = [

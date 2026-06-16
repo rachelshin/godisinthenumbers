@@ -9,6 +9,8 @@ import layout from '../styles/layout';
 import styles from '../styles/modal';
 import { DEFAULT_CATEGORIES } from '../data/constants';
 
+const PROTECTED_CATS = ['Income', 'Revenue', 'Savings'];
+
 export default function ManageCategoriesModal({ visible, categories, onSave, onClose }) {
   const [list, setList] = useState([]);
   const [expandedCat, setExpandedCat] = useState(null);
@@ -125,12 +127,18 @@ export default function ManageCategoriesModal({ visible, categories, onSave, onC
                       <Text style={styles.catName}>{cat.name}</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity onPress={() => startEditCat(cat)} style={styles.actionBtn}>
-                    <Text style={styles.editText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeCategory(cat.id)} style={styles.actionBtn}>
-                    <Text style={styles.removeText}>Remove</Text>
-                  </TouchableOpacity>
+                  {!PROTECTED_CATS.includes(cat.name) && (
+                    <TouchableOpacity onPress={() => startEditCat(cat)} style={styles.actionBtn}>
+                      <Text style={styles.editText}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                  {PROTECTED_CATS.includes(cat.name) ? (
+                    <Text style={[styles.actionBtn, { fontSize: 11, color: '#b0a09e', fontStyle: 'italic' }]}>locked</Text>
+                  ) : (
+                    <TouchableOpacity onPress={() => removeCategory(cat.id)} style={styles.actionBtn}>
+                      <Text style={styles.removeText}>Remove</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Subcategories */}

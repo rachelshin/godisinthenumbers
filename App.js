@@ -36,14 +36,14 @@ const TABS = [
 
 export default function App() {
   const {
-    mode, categories, idealCategories, plan, purchases, visiblePurchases, bankBalance, bills, sobriety,
+    mode, categories, idealCategories, plan, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
     updateCategories, updateIdealCategories, updatePlan,
     addPurchase, deletePurchase, updatePurchase,
     addBill, updateBill, deleteBill,
-    updateSobriety, updateBankBalance,
+    updateSobriety, updateBankBalance, updateSavingsGoals,
   } = useAppData();
 
   const connections = useConnections(user);
@@ -94,6 +94,7 @@ export default function App() {
     <SafeAreaProvider>
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <View style={styles.appColumn}>
 
       {tab === 'Records' && (
         <View style={styles.header}>
@@ -115,7 +116,7 @@ export default function App() {
 
       <View style={{ flex: 1 }}>
         {tab === 'Today'         && <TodaysNumbersScreen mode={mode} onSwitchMode={switchMode} modeSwitching={modeSwitching} categories={categories} onAdd={addPurchase} onUpdateCategories={updateCategories} purchases={visiblePurchases} onDelete={deletePurchase} onUpdate={updatePurchase} bankBalance={bankBalance} onUpdateBankBalance={updateBankBalance} bills={bills} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
-        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} />}
+        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} plan={plan} onUpdatePlan={updatePlan} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} savingsGoals={savingsGoals} onUpdateSavingsGoals={updateSavingsGoals} />}
         {tab === 'Records'       && <RecordsScreen       mode={mode} purchases={visiblePurchases} categories={categories} onMonthView={setMonthViewData} bills={bills} onUpdate={updatePurchase} onDelete={deletePurchase} onAdd={addPurchase} onUpdateCategories={updateCategories} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
       </View>
 
@@ -154,6 +155,8 @@ export default function App() {
             {tab === t.key && <View style={styles.tabDot} />}
           </TouchableOpacity>
         ))}
+      </View>
+
       </View>
     </SafeAreaView>
     </SafeAreaProvider>

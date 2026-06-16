@@ -99,8 +99,49 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
             <Text style={{ fontSize: 11, color: isBusiness ? colors.textDark : colors.textLight, fontStyle: 'italic', letterSpacing: 0.3 }}>BDA</Text>
           </TouchableOpacity>
         </View>
+        <Text style={styles.eyebrowTagline}>
+          {isBusiness ? 'BDA Numbers' : 'God is in the Numbers'}
+        </Text>
+
+        <View style={styles.statCard}>
+          <TouchableOpacity style={styles.statCell} onPress={() => { setBalanceInput(bankBalance.amount != null ? bankBalance.amount.toString() : ''); setBalanceModalVisible(true); }} activeOpacity={0.7}>
+            <Text style={styles.balanceLabel}>in the bank</Text>
+            {bankBalance.amount != null ? (
+              <>
+                <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>
+                  ${bankBalance.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+                {!balanceIsToday && <Text style={styles.balanceStaleBadge}>tap to update</Text>}
+              </>
+            ) : (
+              <Text style={styles.balancePlaceholder}>tap to enter</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.statCell}>
+            <Text style={styles.balanceLabel}>spent today</Text>
+            <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>
+              ${todayTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+
+          {!isBusiness && (
+            <>
+              <View style={styles.statDivider} />
+              <View style={styles.statCell}>
+                <Text style={styles.balanceLabel}>days sober</Text>
+                <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>
+                  {displayStreak}
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+
         {!isBusiness && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
+          <View style={styles.sobrietyRow}>
             <Text style={{ fontSize: 12, color: colors.textLight, fontStyle: 'italic', letterSpacing: 0.3 }}>Sober today?</Text>
             <TouchableOpacity
               onPress={() => handleSobriety('yes')}
@@ -116,42 +157,6 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
             </TouchableOpacity>
           </View>
         )}
-
-        <Text style={styles.tagline}>
-          {isBusiness ? 'BDA Numbers' : 'God is in the Numbers'}
-        </Text>
-
-        <View style={styles.balanceRow}>
-          <TouchableOpacity style={styles.balanceItem} onPress={() => { setBalanceInput(bankBalance.amount != null ? bankBalance.amount.toString() : ''); setBalanceModalVisible(true); }} activeOpacity={0.7}>
-            <Text style={styles.balanceLabel}>in the bank</Text>
-            {bankBalance.amount != null ? (
-              <>
-                <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>
-                  ${bankBalance.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Text>
-                {!balanceIsToday && <Text style={styles.balanceStaleBadge}>tap to update</Text>}
-              </>
-            ) : (
-              <Text style={styles.balancePlaceholder}>tap to enter</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.balanceItem}>
-            <Text style={styles.balanceLabel}>spent today</Text>
-            <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>
-              ${todayTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-          </View>
-
-          {!isBusiness && (
-            <View style={styles.balanceItem}>
-              <Text style={styles.balanceLabel}>days sober</Text>
-              <Text style={styles.balanceAmount} numberOfLines={1} adjustsFontSizeToFit>
-                {displayStreak}
-              </Text>
-            </View>
-          )}
-        </View>
 
         {categories.map((cat, index) => {
           const palette = activeCategoryColors[index % activeCategoryColors.length];

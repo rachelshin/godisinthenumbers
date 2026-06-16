@@ -1,6 +1,8 @@
 // styles/plan.js
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, type } from './shared';
+
+const web = Platform.OS === 'web';
 
 export default StyleSheet.create({
   tierRow: {
@@ -217,6 +219,7 @@ export default StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     maxHeight: '88%',
+    ...(web && { maxWidth: 440 }),
   },
   infoTitle: {
     fontSize: 17,

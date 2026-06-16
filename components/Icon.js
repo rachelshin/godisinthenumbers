@@ -24,6 +24,15 @@ export function IconUpload({ size = 20, color = '#000' }) {
   );
 }
 
+// Target / savings goals — bullseye circle
+export function IconTarget({ size = 20, color = '#000' }) {
+  return svg(size, color,
+    circle('12', '12', '10'),
+    circle('12', '12', '6'),
+    circle('12', '12', '2'),
+  );
+}
+
 // Feather: log-out — door with arrow pointing right
 export function IconLogOut({ size = 20, color = '#000' }) {
   return svg(size, color,
