@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StatusBar, Share, Platform,
+  StatusBar, Share, Platform, Alert,
 } from 'react-native';
 
 if (Platform.OS === 'web') {
@@ -12,6 +12,8 @@ if (Platform.OS === 'web') {
 }
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { auth, googleProvider } from './data/firebase';
+import { linkWithPopup, linkWithRedirect, linkWithCredential, signInWithPopup, signInWithEmailAndPassword, EmailAuthProvider } from 'firebase/auth';
 import { STORAGE_KEYS, BDA_STORAGE_KEYS } from './data/constants';
 import { fsLoadPurchases } from './data/firestoreStorage';
 import { loadItem } from './data/storage';
@@ -47,6 +49,35 @@ export default function App() {
   } = useAppData();
 
   const connections = useConnections(user);
+
+  const handleLinkGoogle = async () => {
+    try {
+      await linkWithPopup(auth.currentUser, googleProvider);
+    } catch (e) {
+      if (e.code === 'auth/credential-already-in-use') {
+        Alert.alert(
+          'Account already exists',
+          "That Google account already has its own profile. Switching will leave your guest data behind.",
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Switch account', onPress: () => signInWithPopup(auth, googleProvider).catch(console.warn) },
+          ]
+        );
+        return;
+      }
+      if (e.code !== 'auth/popup-blocked' && e.code !== 'auth/cancelled-popup-request') throw e;
+      await linkWithRedirect(auth.currentUser, googleProvider);
+    }
+  };
+
+  const handleLinkEmail = async (email, password) => {
+    const credential = EmailAuthProvider.credential(email.trim(), password);
+    await linkWithCredential(auth.currentUser, credential);
+  };
+
+  const handleSignInEmail = async (email, password) => {
+    await signInWithEmailAndPassword(auth, email.trim(), password);
+  };
 
   const [tab, setTab] = useState('Today');
   const [monthViewData, setMonthViewData] = useState(null);
@@ -138,7 +169,11 @@ export default function App() {
         visible={infoVisible}
         onClose={() => setInfoVisible(false)}
         connections={connections}
+        user={user}
         onSignOut={handleSignOut}
+        onLinkGoogle={handleLinkGoogle}
+        onLinkEmail={handleLinkEmail}
+        onSignInEmail={handleSignInEmail}
         onViewUser={(conn) => setViewingConnection(conn)}
       />
 
