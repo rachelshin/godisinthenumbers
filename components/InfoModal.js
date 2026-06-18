@@ -89,14 +89,8 @@ export default function InfoModal({ visible, onClose, connections, user, onSignO
 
   const handleSignOut = () => {
     if (isGuest) {
-      Alert.alert(
-        'Leave guest mode',
-        "Your data won't be accessible after you leave. Create an account first to keep it.",
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Leave anyway', style: 'destructive', onPress: () => { onClose(); onSignOut?.(); } },
-        ]
-      );
+      onClose();
+      onSignOut?.();
     } else {
       Alert.alert('Sign out', 'Are you sure you want to sign out?', [
         { text: 'Cancel', style: 'cancel' },
