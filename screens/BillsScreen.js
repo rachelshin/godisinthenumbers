@@ -9,6 +9,7 @@ import { colors, type } from '../styles/shared';
 import layout from '../styles/layout';
 
 const DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function ordinal(n) {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -16,7 +17,12 @@ function ordinal(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDelete, onBack, initialEditBill }) {
+export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDelete, onBack, initialEditBill, viewMonth, viewYear }) {
+  const now = new Date();
+  const activeViewMonth = viewMonth ?? now.getMonth();
+  const activeViewYear  = viewYear  ?? now.getFullYear();
+  const monthKey = `${activeViewYear}-${String(activeViewMonth + 1).padStart(2, '0')}`;
+  const monthLabel = MONTH_NAMES[activeViewMonth];
   const [formVisible, setFormVisible]           = useState(false);
   const [editingBill, setEditingBill]           = useState(null);
   const [name, setName]                         = useState('');
@@ -73,7 +79,15 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
   };
 
 
-  const totalMonthly = bills.reduce((s, b) => s + b.amount, 0);
+  const toggleSkip = (bill) => {
+    const skipped = bill.skippedMonths || [];
+    const wasSkipped = skipped.includes(monthKey);
+    onUpdate({ ...bill, skippedMonths: wasSkipped ? skipped.filter(m => m !== monthKey) : [...skipped, monthKey] });
+  };
+
+  const totalMonthly = bills
+    .filter(b => !b.skippedMonths?.includes(monthKey))
+    .reduce((s, b) => s + b.amount, 0);
 
   return (
     <View style={layout.screen}>
@@ -100,17 +114,27 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
         {bills.length === 0 ? (
           <Text style={s.empty}>No recurring bills yet.{'\n'}Tap + Add to get started.</Text>
-        ) : bills.map(bill => (
-          <TouchableOpacity key={bill.id} style={s.billRow} onPress={() => openEdit(bill)} activeOpacity={0.7}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.billName}>{bill.name}</Text>
-              <Text style={s.billMeta}>{bill.subcategory || bill.category} · due {ordinal(bill.dayOfMonth)}</Text>
+        ) : bills.map(bill => {
+          const isSkipped = bill.skippedMonths?.includes(monthKey);
+          return (
+            <View key={bill.id} style={s.billRow}>
+              <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={() => openEdit(bill)} activeOpacity={0.7}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.billName, isSkipped && { color: colors.textLight }]}>{bill.name}</Text>
+                  <Text style={s.billMeta}>{bill.subcategory || bill.category} · due {ordinal(bill.dayOfMonth)}</Text>
+                </View>
+                <Text style={[s.billAmount, isSkipped && { color: colors.textLight, textDecorationLine: 'line-through' }]}>
+                  ${bill.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => toggleSkip(bill)} hitSlop={{ top: 10, bottom: 10, left: 12, right: 4 }} style={{ paddingLeft: 14 }}>
+                <Text style={{ fontSize: 11, color: isSkipped ? colors.roseMuted : colors.textLight }}>
+                  {isSkipped ? `↩ ${monthLabel}` : `skip ${monthLabel}`}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text style={s.billAmount}>
-              ${bill.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
       </ScrollView>
 
       {/* Add / Edit form */}

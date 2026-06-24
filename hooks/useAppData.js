@@ -19,32 +19,6 @@ function ensureSavingsCategory(cats) {
   return [...cats, SAVINGS_CATEGORY];
 }
 
-function autoEnterDueBills(bills, purchases) {
-  const today = new Date();
-  const todayDay   = today.getDate();
-  const todayMonth = today.getMonth();
-  const todayYear  = today.getFullYear();
-  const newEntries = bills
-    .filter(bill => {
-      if (bill.dayOfMonth !== todayDay) return false;
-      return !purchases.some(p =>
-        p.billId === bill.id &&
-        new Date(p.date).getMonth()    === todayMonth &&
-        new Date(p.date).getFullYear() === todayYear
-      );
-    })
-    .map(bill => ({
-      id: `bill-${bill.id}-${todayYear}-${todayMonth}`,
-      date: today.toISOString(),
-      amount: bill.amount,
-      category: bill.category,
-      subcategory: bill.subcategory || '',
-      note: '↻ recurring',
-      income: false,
-      billId: bill.id,
-    }));
-  return newEntries.length > 0 ? [...newEntries, ...purchases] : purchases;
-}
 
 export function useAppData() {
   const [mode, setMode]                         = useState('personal');
@@ -96,10 +70,8 @@ export function useAppData() {
       const migratedIdealCats = savedMode === 'personal' ? ensureSavingsCategory(idealCats) : idealCats;
       if (migratedCats !== cats) saveItem(keys.categories, migratedCats);
       if (migratedIdealCats !== idealCats) saveItem(keys.idealCategories, migratedIdealCats);
-      const finalPurchases = autoEnterDueBills(bls, purch);
-      if (finalPurchases !== purch) saveItem(keys.purchases, finalPurchases);
       modeRef.current           = savedMode;
-      purchasesRef.current      = finalPurchases;
+      purchasesRef.current      = purch;
       planRef.current           = pl;
       planOverridesRef.current  = po;
       billsRef.current          = bls;
@@ -108,7 +80,7 @@ export function useAppData() {
       setIdealCategories(migratedIdealCats);
       setPlan(pl);
       setPlanOverrides(po);
-      setPurchases(finalPurchases);
+      setPurchases(purch);
       setBankBalance(bal);
       setBills(bls);
       setSavingsGoals(sg);
@@ -147,15 +119,10 @@ export function useAppData() {
     const bal         = meta?.bankBalance     || { amount: null, updatedAt: null };
     const sg          = meta?.savingsGoals    || {};
     const purch       = isBiz ? bdaPurch : personalPurch;
-    const finalPurchases = autoEnterDueBills(bls, purch);
-    if (finalPurchases !== purch) {
-      const newOnes = finalPurchases.filter(p => !purch.find(o => o.id === p.id));
-      newOnes.forEach(entry => fsSetPurchase(uid, savedMode, entry).catch(console.warn));
-    }
     if (cats !== rawCats) fsSaveMeta(uid, savedMode, { categories: cats }).catch(console.warn);
     if (idealCats !== rawIdealCats) fsSaveMeta(uid, savedMode, { idealCategories: idealCats }).catch(console.warn);
     modeRef.current           = savedMode;
-    purchasesRef.current      = finalPurchases;
+    purchasesRef.current      = purch;
     planRef.current           = pl;
     planOverridesRef.current  = po;
     billsRef.current          = bls;
@@ -164,7 +131,7 @@ export function useAppData() {
     setIdealCategories(idealCats);
     setPlan(pl);
     setPlanOverrides(po);
-    setPurchases(finalPurchases);
+    setPurchases(purch);
     setBankBalance(bal);
     setBills(bls);
     setSavingsGoals(sg);
@@ -261,16 +228,8 @@ export function useAppData() {
       if (migratedCats !== cats) { cats = migratedCats; if (fromFirestore && userRef.current) fsSaveMeta(userRef.current.uid, newMode, { categories: cats }).catch(console.warn); else saveItem(keys.categories, cats); }
       if (migratedIdeal !== idealCats) { idealCats = migratedIdeal; if (fromFirestore && userRef.current) fsSaveMeta(userRef.current.uid, newMode, { idealCategories: idealCats }).catch(console.warn); else saveItem(keys.idealCategories, idealCats); }
     }
-    const finalPurchases = autoEnterDueBills(bls, purch);
-    if (finalPurchases !== purch) {
-      saveItem(keys.purchases, finalPurchases);
-      if (userRef.current) {
-        const newOnes = finalPurchases.filter(p => !purch.find(o => o.id === p.id));
-        newOnes.forEach(entry => fsSetPurchase(userRef.current.uid, newMode, entry).catch(console.warn));
-      }
-    }
     modeRef.current           = newMode;
-    purchasesRef.current      = finalPurchases;
+    purchasesRef.current      = purch;
     planRef.current           = pl;
     planOverridesRef.current  = po || {};
     billsRef.current          = bls;
@@ -278,7 +237,7 @@ export function useAppData() {
     setIdealCategories(idealCats);
     setPlan(pl);
     setPlanOverrides(po || {});
-    setPurchases(finalPurchases);
+    setPurchases(purch);
     setBankBalance(bal);
     setBills(bls);
     setSavingsGoals(sg);
@@ -329,23 +288,12 @@ export function useAppData() {
   }, []);
 
   const deletePurchase = useCallback((id) => {
-    const entry = purchasesRef.current.find(p => p.id === id);
+    const next = purchasesRef.current.filter(p => p.id !== id);
+    purchasesRef.current = next;
+    setPurchases(next);
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
-    if (entry?.billId) {
-      // Soft-delete: keep in storage so autoEnterDueBills won't regenerate this entry
-      const softDeleted = { ...entry, deleted: true };
-      const next = purchasesRef.current.map(p => p.id === id ? softDeleted : p);
-      purchasesRef.current = next;
-      setPurchases(next);
-      saveItem(keys.purchases, next);
-      if (userRef.current) fsSetPurchase(userRef.current.uid, modeRef.current, softDeleted).catch(console.warn);
-    } else {
-      const next = purchasesRef.current.filter(p => p.id !== id);
-      purchasesRef.current = next;
-      setPurchases(next);
-      saveItem(keys.purchases, next);
-      if (userRef.current) fsDeletePurchase(userRef.current.uid, modeRef.current, id).catch(console.warn);
-    }
+    saveItem(keys.purchases, next);
+    if (userRef.current) fsDeletePurchase(userRef.current.uid, modeRef.current, id).catch(console.warn);
   }, []);
 
   const updatePurchase = useCallback((updated) => {

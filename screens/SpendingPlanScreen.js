@@ -37,14 +37,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
-  const isCurrentViewMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
-
   const prevViewMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
     else setViewMonth(m => m - 1);
   };
   const nextViewMonth = () => {
-    if (isCurrentViewMonth) return;
     if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
     else setViewMonth(m => m + 1);
   };
@@ -88,16 +85,10 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       .filter(cat => cat.name !== 'Income' && cat.name !== 'Revenue')
       .reduce((sum, cat) => sum + (catBudgetFor(tier, cat) ?? subTotal(tier, cat)), 0);
 
-  const openCell = (tier, catName, sub, isBill = false) => {
-    setEditingCell({ tier, catName, sub, isBill });
-    if (isBill) {
-      const key = planKey(catName, sub);
-      setCellValue(planOverrides?.[monthKey]?.[tier]?.[key] || '');
-      setThisMonthOnly(true);
-    } else {
-      setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
-      setThisMonthOnly(false);
-    }
+  const openCell = (tier, catName, sub) => {
+    setEditingCell({ tier, catName, sub });
+    setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
+    setThisMonthOnly(false);
   };
 
   const openCatBudget = (tier, catName) => {
@@ -123,7 +114,21 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     const raw = cellValue.replace(/[^0-9.]/g, '');
     const key = sub === null ? catName : planKey(catName, sub);
 
-    if (thisMonthOnly || editingCell.isBill) {
+    const entered = parseFloat(raw) || 0;
+    if (editingCell.sub !== null && editingCell.tier === MAIN_TIER) {
+      const activeBillsForCell = bills.filter(b =>
+        b.category === editingCell.catName &&
+        b.subcategory === editingCell.sub &&
+        !b.skippedMonths?.includes(monthKey)
+      );
+      const billFloor = activeBillsForCell.reduce((s, b) => s + b.amount, 0);
+      if (billFloor > 0 && entered > 0 && entered < billFloor) {
+        Alert.alert('Budget too low', `This subcategory has $${fmt(billFloor)} in recurring bills this month. Set the budget to at least that amount, or skip the bill first.`);
+        return;
+      }
+    }
+
+    if (thisMonthOnly) {
       const next = {
         ...planOverrides,
         [monthKey]: {
@@ -193,12 +198,12 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               activeOpacity={0.7}
             >
               <Text style={[styles.catName, { color: palette.text }]}>{cat.name}</Text>
-              <Text style={[styles.catTotal, { color: catOverBudget ? colors.rose : catTotal > 0 || catActual > 0 ? palette.text : palette.text + '55', fontWeight: catOverBudget ? '700' : 'normal' }]}>
-                {showActuals && catActual > 0 && catTotal > 0
+              <Text style={[styles.catTotal, { color: catOverBudget ? colors.rose : catTotal > 0 || catActual !== 0 ? palette.text : palette.text + '55', fontWeight: catOverBudget ? '700' : 'normal' }]}>
+                {showActuals && catActual !== 0 && catTotal > 0
                   ? `$${fmt(catActual)} / $${fmt(catTotal)}`
                   : catTotal > 0
                   ? `$${fmt(catTotal)}`
-                  : showActuals && catActual > 0
+                  : showActuals && catActual !== 0
                   ? `$${fmt(catActual)}`
                   : '—'}
               </Text>
@@ -212,17 +217,19 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const actual = showActuals ? (monthlyActual[subPlanKey] || 0) : 0;
               const budget = parseFloat(val) || 0;
               const matchingBills = isRealistic ? bills.filter(b => b.category === cat.name && b.subcategory === sub) : [];
+              const activeBills = matchingBills.filter(b => !b.skippedMonths?.includes(monthKey));
               const hasBills = matchingBills.length > 0;
-              const billsSubTotal = hasBills ? matchingBills.reduce((s, b) => s + b.amount, 0) : 0;
+              const activeBillsTotal = activeBills.reduce((s, b) => s + b.amount, 0);
               const overrideVal = planOverrides?.[monthKey]?.[tier]?.[subPlanKey];
-              const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : hasBills ? billsSubTotal : budget;
+              const basePlan = parseFloat(plan[tier]?.[subPlanKey] || '0') || 0;
+              const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
               const isOverridden = hasOverride(tier, subPlanKey);
               return (
                 <TouchableOpacity
                   key={sub}
                   style={historyStyles.summaryRow}
-                  onPress={() => openCell(tier, cat.name, sub, hasBills)}
+                  onPress={() => openCell(tier, cat.name, sub)}
                   activeOpacity={0.75}
                 >
                   <Text style={historyStyles.summarySubcat}>{sub}</Text>
@@ -269,7 +276,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 <TouchableOpacity
                   key={sub}
                   style={styles.subRow}
-                  onPress={() => openCell(tier, cat.name, sub, hasBill)}
+                  onPress={() => openCell(tier, cat.name, sub)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.subName}>{sub}</Text>
@@ -325,9 +332,18 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 placeholderTextColor={colors.textLight}
                 textAlign="center"
               />
-              {editingCell.isBill ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: editingCell.sub && editingCell.tier === MAIN_TIER && bills.some(b => b.category === editingCell.catName && b.subcategory === editingCell.sub) ? 4 : 12 }}>
+                <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
+                <Switch
+                  value={thisMonthOnly}
+                  onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
+                  trackColor={{ false: colors.borderMuted, true: colors.bill }}
+                  thumbColor={colors.surface}
+                />
+              </View>
+              {editingCell.sub && editingCell.tier === MAIN_TIER && bills.some(b => b.category === editingCell.catName && b.subcategory === editingCell.sub) && (
                 <Text style={{ fontSize: 12, color: colors.textLight, textAlign: 'center', marginBottom: 12 }}>
-                  This month only —{' '}
+                  Recurring bill —{' '}
                   <Text
                     style={{ color: colors.bill, textDecorationLine: 'underline' }}
                     onPress={() => { setEditingCell(null); setThisMonthOnly(false); setBillsVisible(true); }}
@@ -335,22 +351,12 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     edit in Bills screen
                   </Text>
                 </Text>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 12 }}>
-                  <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
-                  <Switch
-                    value={thisMonthOnly}
-                    onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
-                    trackColor={{ false: colors.borderMuted, true: colors.bill }}
-                    thumbColor={colors.surface}
-                  />
-                </View>
               )}
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => { setEditingCell(null); setThisMonthOnly(false); }}>
                   <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: !editingCell.isBill && thisMonthOnly ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: thisMonthOnly ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
                   <Text style={{ color: colors.surface, fontWeight: '600' }}>Save</Text>
                 </TouchableOpacity>
               </View>
@@ -373,6 +379,8 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         onDelete={onDeleteBill}
         onBack={() => { setBillsVisible(false); setBillToEdit(null); }}
         initialEditBill={billToEdit}
+        viewMonth={viewMonth}
+        viewYear={viewYear}
       />
     );
   }
@@ -399,8 +407,8 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       <Text style={{ fontSize: 13, color: colors.textMid, letterSpacing: 0.5, minWidth: 130, textAlign: 'center' }}>
         {MONTH_NAMES[viewMonth]} {viewYear}
       </Text>
-      <TouchableOpacity onPress={nextViewMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} disabled={isCurrentViewMonth}>
-        <Text style={{ fontSize: 20, color: isCurrentViewMonth ? colors.borderMuted : colors.textLight }}>›</Text>
+      <TouchableOpacity onPress={nextViewMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Text style={{ fontSize: 20, color: colors.textLight }}>›</Text>
       </TouchableOpacity>
     </View>
   );
