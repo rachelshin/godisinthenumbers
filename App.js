@@ -38,11 +38,11 @@ const TABS = [
 
 export default function App() {
   const {
-    mode, categories, idealCategories, plan, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
+    mode, categories, idealCategories, plan, planOverrides, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
-    updateCategories, updateIdealCategories, updatePlan,
+    updateCategories, updateIdealCategories, updatePlan, updatePlanOverride,
     addPurchase, deletePurchase, updatePurchase,
     addBill, updateBill, deleteBill,
     updateSobriety, updateBankBalance, updateSavingsGoals,
