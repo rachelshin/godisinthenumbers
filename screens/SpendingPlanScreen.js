@@ -88,10 +88,16 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       .filter(cat => cat.name !== 'Income' && cat.name !== 'Revenue')
       .reduce((sum, cat) => sum + (catBudgetFor(tier, cat) ?? subTotal(tier, cat)), 0);
 
-  const openCell = (tier, catName, sub) => {
+  const openCell = (tier, catName, sub, defaultMonthOnly = false) => {
     setEditingCell({ tier, catName, sub });
-    setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
-    setThisMonthOnly(false);
+    if (defaultMonthOnly) {
+      const key = planKey(catName, sub);
+      setCellValue(planOverrides?.[monthKey]?.[tier]?.[key] || '');
+      setThisMonthOnly(true);
+    } else {
+      setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
+      setThisMonthOnly(false);
+    }
   };
 
   const openCatBudget = (tier, catName) => {
@@ -208,17 +214,15 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const matchingBills = isRealistic ? bills.filter(b => b.category === cat.name && b.subcategory === sub) : [];
               const hasBills = matchingBills.length > 0;
               const billsSubTotal = hasBills ? matchingBills.reduce((s, b) => s + b.amount, 0) : 0;
-              const displayBudget = hasBills ? billsSubTotal : budget;
+              const overrideVal = planOverrides?.[monthKey]?.[tier]?.[subPlanKey];
+              const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : hasBills ? billsSubTotal : budget;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
-              const isOverridden = !hasBills && hasOverride(tier, subPlanKey);
+              const isOverridden = hasOverride(tier, subPlanKey);
               return (
                 <TouchableOpacity
                   key={sub}
                   style={historyStyles.summaryRow}
-                  onPress={() => {
-                    if (hasBills) { setBillToEdit(null); setBillsVisible(true); }
-                    else openCell(tier, cat.name, sub);
-                  }}
+                  onPress={() => openCell(tier, cat.name, sub, hasBills)}
                   activeOpacity={0.75}
                 >
                   <Text style={historyStyles.summarySubcat}>{sub}</Text>
@@ -259,13 +263,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const budget = parseFloat(val) || 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && actual > budget;
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);
-              const isOverridden = !hasBill && hasOverride(tier, subPlanKey);
+              const isOverridden = hasOverride(tier, subPlanKey);
               const actualColor = overBudget ? colors.rose : palette.text;
               return (
                 <TouchableOpacity
                   key={sub}
                   style={styles.subRow}
-                  onPress={() => openCell(tier, cat.name, sub)}
+                  onPress={() => openCell(tier, cat.name, sub, hasBill)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.subName}>{sub}</Text>
