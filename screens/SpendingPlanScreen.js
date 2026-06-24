@@ -201,7 +201,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         const filledSubs = cat.subcategories.filter(sub => {
           const v = parseFloat(effectiveBudget(tier, planKey(cat.name, sub)) || '0');
           const a = showActuals ? (monthlyActual[planKey(cat.name, sub)] || 0) : 0;
-          return v > 0 || a > 0;
+          return v > 0 || a !== 0;
         });
         const catBudget = catBudgetFor(tier, cat);
         const catTotal = catBudget ?? subTotal(tier, cat);
@@ -263,7 +263,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                         ? `$${fmt(actual)} / $${fmt(displayBudget)}`
                         : displayBudget > 0
                         ? `$${fmt(displayBudget)}`
-                        : showActuals && actual > 0
+                        : showActuals && actual !== 0
                         ? `$${fmt(actual)}`
                         : '—'}
                     </Text>
@@ -312,14 +312,14 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     activeOpacity={0.7}
                   >
                     {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
-                    {showActuals && actual > 0 && (
+                    {showActuals && actual !== 0 && (
                       <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>${fmt(actual)}</Text>
                     )}
-                    {showActuals && actual > 0 && val ? (
+                    {showActuals && actual !== 0 && val ? (
                       <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
                     ) : null}
-                    <Text style={[styles.subAmount, { color: val ? (showActuals && actual > 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
-                      {val ? `$${fmt(parseFloat(val))}` : showActuals && actual > 0 ? '' : 'tap to enter'}
+                    <Text style={[styles.subAmount, { color: val ? (showActuals && actual !== 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
+                      {val ? `$${fmt(parseFloat(val))}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
                     </Text>
                   </TouchableOpacity>
                 </View>
