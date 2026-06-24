@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Alert, Modal, KeyboardAvoidingView, Platform, useWindowDimensions,
+  Alert, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { colors } from '../styles/shared';
 import layout from '../styles/layout';
@@ -38,21 +38,9 @@ function computeStreak(history) {
   return streak;
 }
 
-const statFontSize = (text, cellWidth) => {
-  if (!text || !cellWidth) return 22;
-  const charWidth = 12.5;
-  const maxFontSize = 22;
-  const minFontSize = 11;
-  const fitted = Math.floor((cellWidth - 8) / (text.length * 0.6));
-  return Math.max(minFontSize, Math.min(maxFontSize, fitted));
-};
 
 export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching = false, categories, onAdd, onUpdateCategories, purchases, onDelete, onUpdate, bankBalance, onUpdateBankBalance, bills = [], sobriety = { history: {} }, onUpdateSobriety }) {
   const isBusiness = mode === 'business';
-  const { width: screenWidth } = useWindowDimensions();
-  const numStatCells = isBusiness ? 2 : 3;
-  const statCellWidth = (screenWidth - 16) / numStatCells;
-
   const activeCategoryColors = isBusiness ? BDA_CATEGORY_COLORS : CATEGORY_COLORS;
   const activeIncomeColor = isBusiness ? BDA_INCOME_COLOR : INCOME_COLOR;
   const dateString = new Date().toLocaleDateString('en-US', {
@@ -121,10 +109,9 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
             <Text style={styles.balanceLabel}>in the bank</Text>
             {bankBalance.amount != null ? (
               <>
-                {(() => {
-                  const t = `$${bankBalance.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                  return <Text style={[styles.balanceAmount, { fontSize: statFontSize(t, statCellWidth) }]} numberOfLines={1}>{t}</Text>;
-                })()}
+                <Text style={styles.balanceAmount} numberOfLines={1}>
+                  ${bankBalance.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
                 {!balanceIsToday && <Text style={styles.balanceStaleBadge}>tap to update</Text>}
               </>
             ) : (
@@ -136,10 +123,9 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
 
           <View style={styles.statCell}>
             <Text style={styles.balanceLabel}>spent today</Text>
-            {(() => {
-              const t = `$${todayTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-              return <Text style={[styles.balanceAmount, { fontSize: statFontSize(t, statCellWidth) }]} numberOfLines={1}>{t}</Text>;
-            })()}
+            <Text style={styles.balanceAmount} numberOfLines={1}>
+              ${todayTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
           </View>
 
           {!isBusiness && (
@@ -147,9 +133,7 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
               <View style={styles.statDivider} />
               <View style={styles.statCell}>
                 <Text style={styles.balanceLabel}>days sober</Text>
-                <Text style={[styles.balanceAmount, { fontSize: statFontSize(String(displayStreak), statCellWidth) }]} numberOfLines={1}>
-                  {displayStreak}
-                </Text>
+                <Text style={styles.balanceAmount} numberOfLines={1}>{displayStreak}</Text>
               </View>
             </>
           )}

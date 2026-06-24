@@ -158,9 +158,9 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: type.xs,
+    fontSize: 10,
     color: colors.textLight,
-    letterSpacing: 3,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 6,
   },

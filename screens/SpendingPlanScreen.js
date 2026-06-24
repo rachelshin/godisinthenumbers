@@ -61,8 +61,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     return plan[tier]?.[key];
   };
 
-  const effectiveBudget = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] ?? basePlanForMonth(tier, key, monthKey);
-  const hasOverride = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] !== undefined;
+  const effectiveBudget = (tier, key) =>
+    tier === MAIN_TIER
+      ? (planOverrides?.[monthKey]?.[tier]?.[key] ?? basePlanForMonth(tier, key, monthKey))
+      : plan[tier]?.[key];
+  const hasOverride = (tier, key) => tier === MAIN_TIER && planOverrides?.[monthKey]?.[tier]?.[key] !== undefined;
 
   const monthlyActual = useMemo(() => {
     const result = {};
@@ -115,13 +118,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
   const openCell = (tier, catName, sub) => {
     setEditingCell({ tier, catName, sub });
-    setCellValue(basePlanForMonth(tier, planKey(catName, sub), monthKey) || '');
+    setCellValue(tier === MAIN_TIER ? (basePlanForMonth(tier, planKey(catName, sub), monthKey) || '') : (plan[tier]?.[planKey(catName, sub)] || ''));
     setThisMonthOnly(false);
   };
 
   const openCatBudget = (tier, catName) => {
     setEditingCell({ tier, catName, sub: null });
-    setCellValue(basePlanForMonth(tier, catName, monthKey) || '');
+    setCellValue(tier === MAIN_TIER ? (basePlanForMonth(tier, catName, monthKey) || '') : (plan[tier]?.[catName] || ''));
     setThisMonthOnly(false);
   };
 
@@ -176,14 +179,18 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         }
       }
       const key2 = sub === null ? catName : planKey(catName, sub);
-      const nextVersions = {
-        ...planVersions,
-        [monthKey]: {
-          ...(planVersions[monthKey] || {}),
-          [tier]: { ...(planVersions[monthKey]?.[tier] || {}), [key2]: raw },
-        },
-      };
-      onUpdatePlanVersions(nextVersions);
+      if (tier !== MAIN_TIER) {
+        onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [key2]: raw } });
+      } else {
+        const nextVersions = {
+          ...planVersions,
+          [monthKey]: {
+            ...(planVersions[monthKey] || {}),
+            [tier]: { ...(planVersions[monthKey]?.[tier] || {}), [key2]: raw },
+          },
+        };
+        onUpdatePlanVersions(nextVersions);
+      }
     }
     setEditingCell(null);
     setThisMonthOnly(false);
@@ -378,15 +385,18 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 placeholderTextColor={colors.textLight}
                 textAlign="center"
               />
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: editingCell.sub && editingCell.tier === MAIN_TIER && bills.some(b => b.category === editingCell.catName && b.subcategory === editingCell.sub) ? 4 : 12 }}>
-                <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
-                <Switch
-                  value={thisMonthOnly}
-                  onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
-                  trackColor={{ false: colors.borderMuted, true: colors.bill }}
-                  thumbColor={colors.surface}
-                />
-              </View>
+              {editingCell.tier === MAIN_TIER && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: editingCell.sub && bills.some(b => b.category === editingCell.catName && b.subcategory === editingCell.sub) ? 4 : 12 }}>
+                  <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
+                  <Switch
+                    value={thisMonthOnly}
+                    onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
+                    trackColor={{ false: colors.borderMuted, true: colors.bill }}
+                    thumbColor={colors.surface}
+                  />
+                </View>
+              )}
+              {editingCell.tier !== MAIN_TIER && <View style={{ marginBottom: 12 }} />}
               {editingCell.sub && editingCell.tier === MAIN_TIER && bills.some(b => b.category === editingCell.catName && b.subcategory === editingCell.sub) && (
                 <Text style={{ fontSize: 12, color: colors.textLight, textAlign: 'center', marginBottom: 12 }}>
                   Recurring bill —{' '}
@@ -402,7 +412,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => { setEditingCell(null); setThisMonthOnly(false); }}>
                   <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: thisMonthOnly ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: thisMonthOnly && editingCell.tier === MAIN_TIER ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
                   <Text style={{ color: colors.surface, fontWeight: '600' }}>Save</Text>
                 </TouchableOpacity>
               </View>
