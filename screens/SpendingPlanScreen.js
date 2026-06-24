@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Alert,
-  Modal, TextInput, KeyboardAvoidingView, Platform,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import { colors } from '../styles/shared';
 import layout from '../styles/layout';
@@ -21,7 +21,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 const MAIN_TIER = 'Realistic';
 const ALT_TIERS = ['Ideal', 'Mini'];
 
-export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, onUpdatePlan, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
+export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, planOverrides = {}, onUpdatePlan, onUpdatePlanOverride, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
   const activePlanColors = mode === 'business' ? BDA_PLAN_CATEGORY_COLORS : PLAN_CATEGORY_COLORS;
   const [altTier, setAltTier] = useState(null);
   const [billsVisible, setBillsVisible] = useState(false);
@@ -29,6 +29,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
   const [cellValue, setCellValue] = useState('');
+  const [thisMonthOnly, setThisMonthOnly] = useState(false);
   const [manageModal, setManageModal] = useState(false);
   const [idealManageModal, setIdealManageModal] = useState(false);
   const [savingsGoalsVisible, setSavingsGoalsVisible] = useState(false);
@@ -51,6 +52,10 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const planKey = (catName, sub) => `${catName} > ${sub}`;
   const catsForTier = (tier) => tier === 'Ideal' ? idealCategories : categories;
 
+  const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+  const effectiveBudget = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] ?? plan[tier]?.[key];
+  const hasOverride = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] !== undefined;
+
   const monthlyActual = useMemo(() => {
     const result = {};
     purchases.forEach(p => {
@@ -69,7 +74,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
   const subTotal = (tier, cat) =>
     cat.subcategories.reduce((sum, sub) => {
-      const v = parseFloat(plan[tier]?.[planKey(cat.name, sub)] || '0');
+      const v = parseFloat(effectiveBudget(tier, planKey(cat.name, sub)) || '0');
       return sum + (isNaN(v) ? 0 : v);
     }, 0);
 
@@ -86,30 +91,57 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const openCell = (tier, catName, sub) => {
     setEditingCell({ tier, catName, sub });
     setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
+    setThisMonthOnly(false);
   };
 
   const openCatBudget = (tier, catName) => {
     setEditingCell({ tier, catName, sub: null });
     setCellValue(plan[tier]?.[catName] || '');
+    setThisMonthOnly(false);
+  };
+
+  const handleToggleMonthOnly = (val, cell) => {
+    setThisMonthOnly(val);
+    const { tier, catName, sub } = cell;
+    const key = sub === null ? catName : planKey(catName, sub);
+    if (val) {
+      setCellValue(planOverrides?.[monthKey]?.[tier]?.[key] || '');
+    } else {
+      setCellValue(plan[tier]?.[key] || '');
+    }
   };
 
   const commitCell = () => {
     if (!editingCell) return;
     const { tier, catName, sub } = editingCell;
     const raw = cellValue.replace(/[^0-9.]/g, '');
-    if (sub === null) {
-      const entered = parseFloat(raw) || 0;
-      const cat = catsForTier(tier).find(c => c.name === catName);
-      const subSum = subTotal(tier, cat);
-      if (entered > 0 && entered < subSum) {
-        Alert.alert('Budget too low', `Category budget must be at least $${fmt(subSum)} to cover your subcategory totals.`);
-        return;
-      }
-      onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [catName]: raw } });
+    const key = sub === null ? catName : planKey(catName, sub);
+
+    if (thisMonthOnly) {
+      const next = {
+        ...planOverrides,
+        [monthKey]: {
+          ...planOverrides?.[monthKey],
+          [tier]: { ...planOverrides?.[monthKey]?.[tier], [key]: raw },
+        },
+      };
+      onUpdatePlanOverride(next);
     } else {
-      onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [planKey(catName, sub)]: raw } });
+      if (sub === null) {
+        const entered = parseFloat(raw) || 0;
+        const cat = catsForTier(tier).find(c => c.name === catName);
+        const subSum = subTotal(tier, cat);
+        if (entered > 0 && entered < subSum) {
+          Alert.alert('Budget too low', `Category budget must be at least $${fmt(subSum)} to cover your subcategory totals.`);
+          return;
+        }
+        onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [catName]: raw } });
+      } else {
+        onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [planKey(catName, sub)]: raw } });
+      }
     }
     setEditingCell(null);
+    setThisMonthOnly(false);
   };
 
   const activeTier = altTier ?? MAIN_TIER;
@@ -138,7 +170,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         const isExpanded = expandedCategory === cat.name;
 
         const filledSubs = cat.subcategories.filter(sub => {
-          const v = parseFloat(plan[tier]?.[planKey(cat.name, sub)] || '0');
+          const v = parseFloat(effectiveBudget(tier, planKey(cat.name, sub)) || '0');
           const a = showActuals ? (monthlyActual[planKey(cat.name, sub)] || 0) : 0;
           return v > 0 || a > 0;
         });
@@ -169,14 +201,16 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
             {/* Always-visible filled subcategories when collapsed */}
             {!isExpanded && filledSubs.map(sub => {
-              const val = plan[tier]?.[planKey(cat.name, sub)] || '';
-              const actual = showActuals ? (monthlyActual[planKey(cat.name, sub)] || 0) : 0;
+              const subPlanKey = planKey(cat.name, sub);
+              const val = effectiveBudget(tier, subPlanKey) || '';
+              const actual = showActuals ? (monthlyActual[subPlanKey] || 0) : 0;
               const budget = parseFloat(val) || 0;
               const matchingBills = isRealistic ? bills.filter(b => b.category === cat.name && b.subcategory === sub) : [];
               const hasBills = matchingBills.length > 0;
               const billsSubTotal = hasBills ? matchingBills.reduce((s, b) => s + b.amount, 0) : 0;
               const displayBudget = hasBills ? billsSubTotal : budget;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
+              const isOverridden = !hasBills && hasOverride(tier, subPlanKey);
               return (
                 <TouchableOpacity
                   key={sub}
@@ -189,7 +223,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 >
                   <Text style={historyStyles.summarySubcat}>{sub}</Text>
                   {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
-                  <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
+                  <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : isOverridden ? colors.bill : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
                     {showActuals && displayBudget > 0
                       ? `$${fmt(actual)} / $${fmt(displayBudget)}`
                       : displayBudget > 0
@@ -219,11 +253,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
             {/* Expanded: all subcategories for editing */}
             {isExpanded && cat.subcategories.map(sub => {
-              const val = plan[tier]?.[planKey(cat.name, sub)] || '';
-              const actual = showActuals ? (monthlyActual[planKey(cat.name, sub)] || 0) : 0;
+              const subPlanKey = planKey(cat.name, sub);
+              const val = effectiveBudget(tier, subPlanKey) || '';
+              const actual = showActuals ? (monthlyActual[subPlanKey] || 0) : 0;
               const budget = parseFloat(val) || 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && actual > budget;
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);
+              const isOverridden = !hasBill && hasOverride(tier, subPlanKey);
               const actualColor = overBudget ? colors.rose : palette.text;
               return (
                 <TouchableOpacity
@@ -241,7 +277,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     {showActuals && actual > 0 && val ? (
                       <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
                     ) : null}
-                    <Text style={[styles.subAmount, { color: val ? (showActuals && actual > 0 ? colors.textLight : palette.text) : colors.textLight }]}>
+                    <Text style={[styles.subAmount, { color: val ? (showActuals && actual > 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
                       {val ? `$${fmt(parseFloat(val))}` : showActuals && actual > 0 ? '' : 'tap to enter'}
                     </Text>
                   </View>
@@ -285,11 +321,20 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 placeholderTextColor={colors.textLight}
                 textAlign="center"
               />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 12 }}>
+                <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
+                <Switch
+                  value={thisMonthOnly}
+                  onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
+                  trackColor={{ false: colors.borderMuted, true: colors.bill }}
+                  thumbColor={colors.surface}
+                />
+              </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => setEditingCell(null)}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => { setEditingCell(null); setThisMonthOnly(false); }}>
                   <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: tintColor, flex: 2 }]} onPress={commitCell}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: thisMonthOnly ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
                   <Text style={{ color: colors.surface, fontWeight: '600' }}>Save</Text>
                 </TouchableOpacity>
               </View>

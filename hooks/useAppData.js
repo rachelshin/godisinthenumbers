@@ -51,6 +51,7 @@ export function useAppData() {
   const [categories, setCategories]             = useState(DEFAULT_CATEGORIES);
   const [idealCategories, setIdealCategories]   = useState(DEFAULT_CATEGORIES);
   const [plan, setPlan]                         = useState({ Ideal: {}, Realistic: {}, Mini: {} });
+  const [planOverrides, setPlanOverrides]       = useState({});
   const [purchases, setPurchases]               = useState([]);
   const [bankBalance, setBankBalance]           = useState({ amount: null, updatedAt: null });
   const [bills, setBills]                       = useState([]);
@@ -65,12 +66,14 @@ export function useAppData() {
   const modeRef      = useRef('personal');
   const billsRef     = useRef([]);
   const purchasesRef = useRef([]);
-  const planRef      = useRef({ Ideal: {}, Realistic: {}, Mini: {} });
+  const planRef           = useRef({ Ideal: {}, Realistic: {}, Mini: {} });
+  const planOverridesRef  = useRef({});
 
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { billsRef.current = bills; }, [bills]);
   useEffect(() => { purchasesRef.current = purchases; }, [purchases]);
   useEffect(() => { planRef.current = plan; }, [plan]);
+  useEffect(() => { planOverridesRef.current = planOverrides; }, [planOverrides]);
 
   // ── Load localStorage on startup ─────────────────────────────
   useEffect(() => {
@@ -78,10 +81,11 @@ export function useAppData() {
       const savedMode   = await loadItem('numbers_mode', 'personal');
       const keys        = savedMode === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
       const defaultCats = savedMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-      const [cats, idealCats, pl, purch, bal, bls, sober, sg] = await Promise.all([
+      const [cats, idealCats, pl, po, purch, bal, bls, sober, sg] = await Promise.all([
         loadItem(keys.categories,      defaultCats),
         loadItem(keys.idealCategories, defaultCats),
         loadItem(keys.plan,            { Ideal: {}, Realistic: {}, Mini: {} }),
+        loadItem(keys.planOverrides,   {}),
         loadItem(keys.purchases,       []),
         loadItem(keys.bankBalance,     { amount: null, updatedAt: null }),
         loadItem(keys.bills,           []),
@@ -94,14 +98,16 @@ export function useAppData() {
       if (migratedIdealCats !== idealCats) saveItem(keys.idealCategories, migratedIdealCats);
       const finalPurchases = autoEnterDueBills(bls, purch);
       if (finalPurchases !== purch) saveItem(keys.purchases, finalPurchases);
-      modeRef.current      = savedMode;
-      purchasesRef.current = finalPurchases;
-      planRef.current      = pl;
-      billsRef.current     = bls;
+      modeRef.current           = savedMode;
+      purchasesRef.current      = finalPurchases;
+      planRef.current           = pl;
+      planOverridesRef.current  = po;
+      billsRef.current          = bls;
       setMode(savedMode);
       setCategories(migratedCats);
       setIdealCategories(migratedIdealCats);
       setPlan(pl);
+      setPlanOverrides(po);
       setPurchases(finalPurchases);
       setBankBalance(bal);
       setBills(bls);
@@ -136,6 +142,7 @@ export function useAppData() {
     const cats        = !isBiz ? ensureSavingsCategory(rawCats) : rawCats;
     const idealCats   = !isBiz ? ensureSavingsCategory(rawIdealCats) : rawIdealCats;
     const pl          = meta?.plan            || { Ideal: {}, Realistic: {}, Mini: {} };
+    const po          = meta?.planOverrides   || {};
     const bls         = meta?.bills           || [];
     const bal         = meta?.bankBalance     || { amount: null, updatedAt: null };
     const sg          = meta?.savingsGoals    || {};
@@ -147,14 +154,16 @@ export function useAppData() {
     }
     if (cats !== rawCats) fsSaveMeta(uid, savedMode, { categories: cats }).catch(console.warn);
     if (idealCats !== rawIdealCats) fsSaveMeta(uid, savedMode, { idealCategories: idealCats }).catch(console.warn);
-    modeRef.current      = savedMode;
-    purchasesRef.current = finalPurchases;
-    planRef.current      = pl;
-    billsRef.current     = bls;
+    modeRef.current           = savedMode;
+    purchasesRef.current      = finalPurchases;
+    planRef.current           = pl;
+    planOverridesRef.current  = po;
+    billsRef.current          = bls;
     setMode(savedMode);
     setCategories(cats);
     setIdealCategories(idealCats);
     setPlan(pl);
+    setPlanOverrides(po);
     setPurchases(finalPurchases);
     setBankBalance(bal);
     setBills(bls);
@@ -184,14 +193,16 @@ export function useAppData() {
         }
       } else if (wasSignedIn) {
         const empty = { Ideal: {}, Realistic: {}, Mini: {} };
-        modeRef.current      = 'personal';
-        purchasesRef.current = [];
-        planRef.current      = empty;
-        billsRef.current     = [];
+        modeRef.current           = 'personal';
+        purchasesRef.current      = [];
+        planRef.current           = empty;
+        planOverridesRef.current  = {};
+        billsRef.current          = [];
         setMode('personal');
         setCategories(DEFAULT_CATEGORIES);
         setIdealCategories(DEFAULT_CATEGORIES);
         setPlan(empty);
+        setPlanOverrides({});
         setPurchases([]);
         setBankBalance({ amount: null, updatedAt: null });
         setBills([]);
@@ -211,7 +222,7 @@ export function useAppData() {
     setModeSwitching(true);
     const keys        = newMode === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     const defaultCats = newMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-    let cats, idealCats, pl, purch, bal, bls, sg;
+    let cats, idealCats, pl, po, purch, bal, bls, sg;
     let fromFirestore = false;
     if (userRef.current) {
       try {
@@ -222,6 +233,7 @@ export function useAppData() {
         cats      = meta?.categories      || defaultCats;
         idealCats = meta?.idealCategories || defaultCats;
         pl        = meta?.plan            || { Ideal: {}, Realistic: {}, Mini: {} };
+        po        = meta?.planOverrides   || {};
         bls       = meta?.bills           || [];
         bal       = meta?.bankBalance     || { amount: null, updatedAt: null };
         sg        = meta?.savingsGoals    || {};
@@ -232,10 +244,11 @@ export function useAppData() {
       }
     }
     if (!fromFirestore) {
-      [cats, idealCats, pl, purch, bal, bls, sg] = await Promise.all([
+      [cats, idealCats, pl, po, purch, bal, bls, sg] = await Promise.all([
         loadItem(keys.categories,      defaultCats),
         loadItem(keys.idealCategories, defaultCats),
         loadItem(keys.plan,            { Ideal: {}, Realistic: {}, Mini: {} }),
+        loadItem(keys.planOverrides,   {}),
         loadItem(keys.purchases,       []),
         loadItem(keys.bankBalance,     { amount: null, updatedAt: null }),
         loadItem(keys.bills,           []),
@@ -256,13 +269,15 @@ export function useAppData() {
         newOnes.forEach(entry => fsSetPurchase(userRef.current.uid, newMode, entry).catch(console.warn));
       }
     }
-    modeRef.current      = newMode;
-    purchasesRef.current = finalPurchases;
-    planRef.current      = pl;
-    billsRef.current     = bls;
+    modeRef.current           = newMode;
+    purchasesRef.current      = finalPurchases;
+    planRef.current           = pl;
+    planOverridesRef.current  = po || {};
+    billsRef.current          = bls;
     setCategories(cats);
     setIdealCategories(idealCats);
     setPlan(pl);
+    setPlanOverrides(po || {});
     setPurchases(finalPurchases);
     setBankBalance(bal);
     setBills(bls);
@@ -294,6 +309,14 @@ export function useAppData() {
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     saveItem(keys.plan, pl);
     if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { plan: pl }).catch(console.warn);
+  }, []);
+
+  const updatePlanOverride = useCallback((po) => {
+    planOverridesRef.current = po;
+    setPlanOverrides(po);
+    const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
+    saveItem(keys.planOverrides, po);
+    if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { planOverrides: po }).catch(console.warn);
   }, []);
 
   const addPurchase = useCallback((p) => {
@@ -441,11 +464,11 @@ export function useAppData() {
   const visiblePurchases = purchases.filter(p => !p.deleted);
 
   return {
-    mode, categories, idealCategories, plan, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
+    mode, categories, idealCategories, plan, planOverrides, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
-    updateCategories, updateIdealCategories, updatePlan,
+    updateCategories, updateIdealCategories, updatePlan, updatePlanOverride,
     addPurchase, deletePurchase, updatePurchase,
     addBill, updateBill, deleteBill,
     updateSobriety, updateBankBalance, updateSavingsGoals,
