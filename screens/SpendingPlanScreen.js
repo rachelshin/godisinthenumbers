@@ -30,6 +30,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const [editingCell, setEditingCell] = useState(null);
   const [cellValue, setCellValue] = useState('');
   const [thisMonthOnly, setThisMonthOnly] = useState(false);
+  const [viewingEntriesFor, setViewingEntriesFor] = useState(null);
   const [manageModal, setManageModal] = useState(false);
   const [idealManageModal, setIdealManageModal] = useState(false);
   const [savingsGoalsVisible, setSavingsGoalsVisible] = useState(false);
@@ -226,25 +227,32 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
               const isOverridden = hasOverride(tier, subPlanKey);
               return (
-                <TouchableOpacity
-                  key={sub}
-                  style={historyStyles.summaryRow}
-                  onPress={() => openCell(tier, cat.name, sub)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={historyStyles.summarySubcat}>{sub}</Text>
-                  {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
-                  <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : isOverridden ? colors.bill : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
-                    {showActuals && displayBudget > 0
-                      ? `$${fmt(actual)} / $${fmt(displayBudget)}`
-                      : displayBudget > 0
-                      ? `$${fmt(displayBudget)}`
-                      : showActuals && actual > 0
-                      ? `$${fmt(actual)}`
-                      : '—'}
-                  </Text>
-                  <Text style={historyStyles.editHint}>Edit</Text>
-                </TouchableOpacity>
+                <View key={sub} style={historyStyles.summaryRow}>
+                  <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={historyStyles.summarySubcat}>{sub}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => openCell(tier, cat.name, sub)}
+                    activeOpacity={0.75}
+                  >
+                    {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
+                    <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : isOverridden ? colors.bill : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
+                      {showActuals && displayBudget > 0
+                        ? `$${fmt(actual)} / $${fmt(displayBudget)}`
+                        : displayBudget > 0
+                        ? `$${fmt(displayBudget)}`
+                        : showActuals && actual > 0
+                        ? `$${fmt(actual)}`
+                        : '—'}
+                    </Text>
+                    <Text style={historyStyles.editHint}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
               );
             })}
 
@@ -273,14 +281,19 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const isOverridden = hasOverride(tier, subPlanKey);
               const actualColor = overBudget ? colors.rose : palette.text;
               return (
-                <TouchableOpacity
-                  key={sub}
-                  style={styles.subRow}
-                  onPress={() => openCell(tier, cat.name, sub)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.subName}>{sub}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View key={sub} style={styles.subRow}>
+                  <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.subName}>{sub}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    onPress={() => openCell(tier, cat.name, sub)}
+                    activeOpacity={0.7}
+                  >
                     {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
                     {showActuals && actual > 0 && (
                       <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>${fmt(actual)}</Text>
@@ -291,8 +304,8 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     <Text style={[styles.subAmount, { color: val ? (showActuals && actual > 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
                       {val ? `$${fmt(parseFloat(val))}` : showActuals && actual > 0 ? '' : 'tap to enter'}
                     </Text>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                </View>
               );
             })}
           </View>
@@ -367,6 +380,53 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     </Modal>
   );
 
+  const renderEntriesModal = () => {
+    if (!viewingEntriesFor) return null;
+    const { catName, sub } = viewingEntriesFor;
+    const entries = purchases
+      .filter(p => {
+        const d = new Date(p.date);
+        return d.getMonth() === viewMonth && d.getFullYear() === viewYear &&
+          p.category === catName && p.subcategory === sub && !p.deleted;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const total = entries.reduce((s, p) => s + p.amount, 0);
+    return (
+      <Modal visible transparent animationType="fade">
+        <View style={layout.modalOverlay}>
+          <View style={[layout.modalBox, { maxHeight: '70%' }]}>
+            <Text style={styles.modalSub}>{sub}</Text>
+            <Text style={[styles.modalCat, { marginBottom: 16 }]}>{catName}</Text>
+            {entries.length === 0 ? (
+              <Text style={{ color: colors.textLight, fontSize: 13, textAlign: 'center', marginBottom: 16 }}>No entries this month</Text>
+            ) : (
+              <ScrollView style={{ marginBottom: 12 }} showsVerticalScrollIndicator={false}>
+                {entries.map(p => (
+                  <View key={p.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 0.5, borderColor: colors.border }}>
+                    <Text style={{ fontSize: 13, color: colors.textMid }}>
+                      {new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {p.note ? `  ·  ${p.note}` : ''}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.textDark, fontWeight: '500' }}>${fmt(p.amount)}</Text>
+                  </View>
+                ))}
+                {entries.length > 1 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10 }}>
+                    <Text style={{ fontSize: 13, color: colors.textLight }}>Total</Text>
+                    <Text style={{ fontSize: 13, color: colors.textDark, fontWeight: '600' }}>${fmt(total)}</Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted }]} onPress={() => setViewingEntriesFor(null)}>
+              <Text style={{ color: colors.textMid, fontWeight: '500' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   // ── Bills sub-screen ─────────────────────────────────────────
 
   if (billsVisible) {
@@ -438,6 +498,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
           )}
         </ScrollView>
         {renderEditModal(meta.color)}
+        {renderEntriesModal()}
         {altTier === 'Ideal' && (
           <ManageCategoriesModal
             visible={idealManageModal}
@@ -491,6 +552,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       </ScrollView>
 
       {renderEditModal(colors.rose)}
+      {renderEntriesModal()}
 
       <ManageCategoriesModal
         visible={manageModal}
