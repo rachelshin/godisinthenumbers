@@ -169,6 +169,8 @@ export default StyleSheet.create({
     fontWeight: '300',
     color: colors.textDark,
     letterSpacing: 0.5,
+    width: '100%',
+    textAlign: 'center',
   },
   balanceStaleBadge: {
     fontSize: type.xs,
