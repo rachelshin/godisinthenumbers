@@ -26,6 +26,7 @@ export function useAppData() {
   const [idealCategories, setIdealCategories]   = useState(DEFAULT_CATEGORIES);
   const [plan, setPlan]                         = useState({ Ideal: {}, Realistic: {}, Mini: {} });
   const [planOverrides, setPlanOverrides]       = useState({});
+  const [planVersions, setPlanVersions]         = useState({});
   const [purchases, setPurchases]               = useState([]);
   const [bankBalance, setBankBalance]           = useState({ amount: null, updatedAt: null });
   const [bills, setBills]                       = useState([]);
@@ -42,12 +43,14 @@ export function useAppData() {
   const purchasesRef = useRef([]);
   const planRef           = useRef({ Ideal: {}, Realistic: {}, Mini: {} });
   const planOverridesRef  = useRef({});
+  const planVersionsRef   = useRef({});
 
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { billsRef.current = bills; }, [bills]);
   useEffect(() => { purchasesRef.current = purchases; }, [purchases]);
   useEffect(() => { planRef.current = plan; }, [plan]);
   useEffect(() => { planOverridesRef.current = planOverrides; }, [planOverrides]);
+  useEffect(() => { planVersionsRef.current = planVersions; }, [planVersions]);
 
   // ── Load localStorage on startup ─────────────────────────────
   useEffect(() => {
@@ -55,11 +58,12 @@ export function useAppData() {
       const savedMode   = await loadItem('numbers_mode', 'personal');
       const keys        = savedMode === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
       const defaultCats = savedMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-      const [cats, idealCats, pl, po, purch, bal, bls, sober, sg] = await Promise.all([
+      const [cats, idealCats, pl, po, pv, purch, bal, bls, sober, sg] = await Promise.all([
         loadItem(keys.categories,      defaultCats),
         loadItem(keys.idealCategories, defaultCats),
         loadItem(keys.plan,            { Ideal: {}, Realistic: {}, Mini: {} }),
         loadItem(keys.planOverrides,   {}),
+        loadItem(keys.planVersions,    {}),
         loadItem(keys.purchases,       []),
         loadItem(keys.bankBalance,     { amount: null, updatedAt: null }),
         loadItem(keys.bills,           []),
@@ -74,12 +78,14 @@ export function useAppData() {
       purchasesRef.current      = purch;
       planRef.current           = pl;
       planOverridesRef.current  = po;
+      planVersionsRef.current   = pv;
       billsRef.current          = bls;
       setMode(savedMode);
       setCategories(migratedCats);
       setIdealCategories(migratedIdealCats);
       setPlan(pl);
       setPlanOverrides(po);
+      setPlanVersions(pv);
       setPurchases(purch);
       setBankBalance(bal);
       setBills(bls);
@@ -115,6 +121,7 @@ export function useAppData() {
     const idealCats   = !isBiz ? ensureSavingsCategory(rawIdealCats) : rawIdealCats;
     const pl          = meta?.plan            || { Ideal: {}, Realistic: {}, Mini: {} };
     const po          = meta?.planOverrides   || {};
+    const pv          = meta?.planVersions    || {};
     const bls         = meta?.bills           || [];
     const bal         = meta?.bankBalance     || { amount: null, updatedAt: null };
     const sg          = meta?.savingsGoals    || {};
@@ -125,12 +132,14 @@ export function useAppData() {
     purchasesRef.current      = purch;
     planRef.current           = pl;
     planOverridesRef.current  = po;
+    planVersionsRef.current   = pv;
     billsRef.current          = bls;
     setMode(savedMode);
     setCategories(cats);
     setIdealCategories(idealCats);
     setPlan(pl);
     setPlanOverrides(po);
+    setPlanVersions(pv);
     setPurchases(purch);
     setBankBalance(bal);
     setBills(bls);
@@ -189,7 +198,7 @@ export function useAppData() {
     setModeSwitching(true);
     const keys        = newMode === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     const defaultCats = newMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-    let cats, idealCats, pl, po, purch, bal, bls, sg;
+    let cats, idealCats, pl, po, pv, purch, bal, bls, sg;
     let fromFirestore = false;
     if (userRef.current) {
       try {
@@ -201,6 +210,7 @@ export function useAppData() {
         idealCats = meta?.idealCategories || defaultCats;
         pl        = meta?.plan            || { Ideal: {}, Realistic: {}, Mini: {} };
         po        = meta?.planOverrides   || {};
+        pv        = meta?.planVersions    || {};
         bls       = meta?.bills           || [];
         bal       = meta?.bankBalance     || { amount: null, updatedAt: null };
         sg        = meta?.savingsGoals    || {};
@@ -211,11 +221,12 @@ export function useAppData() {
       }
     }
     if (!fromFirestore) {
-      [cats, idealCats, pl, po, purch, bal, bls, sg] = await Promise.all([
+      [cats, idealCats, pl, po, pv, purch, bal, bls, sg] = await Promise.all([
         loadItem(keys.categories,      defaultCats),
         loadItem(keys.idealCategories, defaultCats),
         loadItem(keys.plan,            { Ideal: {}, Realistic: {}, Mini: {} }),
         loadItem(keys.planOverrides,   {}),
+        loadItem(keys.planVersions,    {}),
         loadItem(keys.purchases,       []),
         loadItem(keys.bankBalance,     { amount: null, updatedAt: null }),
         loadItem(keys.bills,           []),
@@ -232,11 +243,13 @@ export function useAppData() {
     purchasesRef.current      = purch;
     planRef.current           = pl;
     planOverridesRef.current  = po || {};
+    planVersionsRef.current   = pv || {};
     billsRef.current          = bls;
     setCategories(cats);
     setIdealCategories(idealCats);
     setPlan(pl);
     setPlanOverrides(po || {});
+    setPlanVersions(pv || {});
     setPurchases(purch);
     setBankBalance(bal);
     setBills(bls);
@@ -276,6 +289,14 @@ export function useAppData() {
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     saveItem(keys.planOverrides, po);
     if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { planOverrides: po }).catch(console.warn);
+  }, []);
+
+  const updatePlanVersions = useCallback((pv) => {
+    planVersionsRef.current = pv;
+    setPlanVersions(pv);
+    const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
+    saveItem(keys.planVersions, pv);
+    if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { planVersions: pv }).catch(console.warn);
   }, []);
 
   const addPurchase = useCallback((p) => {
@@ -412,11 +433,11 @@ export function useAppData() {
   const visiblePurchases = purchases.filter(p => !p.deleted);
 
   return {
-    mode, categories, idealCategories, plan, planOverrides, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
+    mode, categories, idealCategories, plan, planOverrides, planVersions, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
-    updateCategories, updateIdealCategories, updatePlan, updatePlanOverride,
+    updateCategories, updateIdealCategories, updatePlan, updatePlanOverride, updatePlanVersions,
     addPurchase, deletePurchase, updatePurchase,
     addBill, updateBill, deleteBill,
     updateSobriety, updateBankBalance, updateSavingsGoals,

@@ -21,7 +21,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 const MAIN_TIER = 'Realistic';
 const ALT_TIERS = ['Ideal', 'Mini'];
 
-export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, planOverrides = {}, onUpdatePlan, onUpdatePlanOverride, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
+export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, planOverrides = {}, planVersions = {}, onUpdatePlan, onUpdatePlanOverride, onUpdatePlanVersions, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
   const activePlanColors = mode === 'business' ? BDA_PLAN_CATEGORY_COLORS : PLAN_CATEGORY_COLORS;
   const [altTier, setAltTier] = useState(null);
   const [billsVisible, setBillsVisible] = useState(false);
@@ -51,7 +51,17 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const catsForTier = (tier) => tier === 'Ideal' ? idealCategories : categories;
 
   const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
-  const effectiveBudget = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] ?? plan[tier]?.[key];
+
+  const basePlanForMonth = (tier, key, forMonthKey) => {
+    const keys = Object.keys(planVersions).filter(m => m <= forMonthKey).sort();
+    for (let i = keys.length - 1; i >= 0; i--) {
+      const val = planVersions[keys[i]]?.[tier]?.[key];
+      if (val !== undefined) return val;
+    }
+    return plan[tier]?.[key];
+  };
+
+  const effectiveBudget = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] ?? basePlanForMonth(tier, key, monthKey);
   const hasOverride = (tier, key) => planOverrides?.[monthKey]?.[tier]?.[key] !== undefined;
 
   const monthlyActual = useMemo(() => {
@@ -94,7 +104,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     }, 0);
 
   const catBudgetFor = (tier, cat) => {
-    const v = parseFloat(plan[tier]?.[cat.name] || '0');
+    const v = parseFloat(basePlanForMonth(tier, cat.name, monthKey) || '0');
     return (!isNaN(v) && v > 0) ? v : null;
   };
 
@@ -105,13 +115,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
   const openCell = (tier, catName, sub) => {
     setEditingCell({ tier, catName, sub });
-    setCellValue(plan[tier]?.[planKey(catName, sub)] || '');
+    setCellValue(basePlanForMonth(tier, planKey(catName, sub), monthKey) || '');
     setThisMonthOnly(false);
   };
 
   const openCatBudget = (tier, catName) => {
     setEditingCell({ tier, catName, sub: null });
-    setCellValue(plan[tier]?.[catName] || '');
+    setCellValue(basePlanForMonth(tier, catName, monthKey) || '');
     setThisMonthOnly(false);
   };
 
@@ -122,7 +132,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     if (val) {
       setCellValue(planOverrides?.[monthKey]?.[tier]?.[key] || '');
     } else {
-      setCellValue(plan[tier]?.[key] || '');
+      setCellValue(basePlanForMonth(tier, key, monthKey) || '');
     }
   };
 
@@ -164,10 +174,16 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
           Alert.alert('Budget too low', `Category budget must be at least $${fmt(subSum)} to cover your subcategory totals.`);
           return;
         }
-        onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [catName]: raw } });
-      } else {
-        onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [planKey(catName, sub)]: raw } });
       }
+      const key2 = sub === null ? catName : planKey(catName, sub);
+      const nextVersions = {
+        ...planVersions,
+        [monthKey]: {
+          ...(planVersions[monthKey] || {}),
+          [tier]: { ...(planVersions[monthKey]?.[tier] || {}), [key2]: raw },
+        },
+      };
+      onUpdatePlanVersions(nextVersions);
     }
     setEditingCell(null);
     setThisMonthOnly(false);
@@ -239,7 +255,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const hasBills = matchingBills.length > 0;
               const activeBillsTotal = activeBills.reduce((s, b) => s + b.amount, 0);
               const overrideVal = planOverrides?.[monthKey]?.[tier]?.[subPlanKey];
-              const basePlan = parseFloat(plan[tier]?.[subPlanKey] || '0') || 0;
+              const basePlan = parseFloat(basePlanForMonth(tier, subPlanKey, monthKey) || '0') || 0;
               const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
               const isOverridden = hasOverride(tier, subPlanKey);
