@@ -91,12 +91,19 @@ export default function InfoModal({ visible, onClose, connections, user, onSignO
     if (isGuest) {
       onClose();
       onSignOut?.();
-    } else {
-      Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign out', style: 'destructive', onPress: () => { onClose(); onSignOut?.(); } },
-      ]);
+      return;
     }
+    if (Platform.OS === 'web') {
+      if (window.confirm('Sign out of your account?')) {
+        onClose();
+        onSignOut?.();
+      }
+      return;
+    }
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => { onClose(); onSignOut?.(); } },
+    ]);
   };
 
   const handleLinkGooglePress = async () => {
