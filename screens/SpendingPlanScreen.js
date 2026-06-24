@@ -88,9 +88,9 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       .filter(cat => cat.name !== 'Income' && cat.name !== 'Revenue')
       .reduce((sum, cat) => sum + (catBudgetFor(tier, cat) ?? subTotal(tier, cat)), 0);
 
-  const openCell = (tier, catName, sub, defaultMonthOnly = false) => {
-    setEditingCell({ tier, catName, sub });
-    if (defaultMonthOnly) {
+  const openCell = (tier, catName, sub, isBill = false) => {
+    setEditingCell({ tier, catName, sub, isBill });
+    if (isBill) {
       const key = planKey(catName, sub);
       setCellValue(planOverrides?.[monthKey]?.[tier]?.[key] || '');
       setThisMonthOnly(true);
@@ -123,7 +123,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     const raw = cellValue.replace(/[^0-9.]/g, '');
     const key = sub === null ? catName : planKey(catName, sub);
 
-    if (thisMonthOnly) {
+    if (thisMonthOnly || editingCell.isBill) {
       const next = {
         ...planOverrides,
         [monthKey]: {
@@ -325,20 +325,32 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                 placeholderTextColor={colors.textLight}
                 textAlign="center"
               />
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 12 }}>
-                <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
-                <Switch
-                  value={thisMonthOnly}
-                  onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
-                  trackColor={{ false: colors.borderMuted, true: colors.bill }}
-                  thumbColor={colors.surface}
-                />
-              </View>
+              {editingCell.isBill ? (
+                <Text style={{ fontSize: 12, color: colors.textLight, textAlign: 'center', marginBottom: 12 }}>
+                  This month only —{' '}
+                  <Text
+                    style={{ color: colors.bill, textDecorationLine: 'underline' }}
+                    onPress={() => { setEditingCell(null); setThisMonthOnly(false); setBillsVisible(true); }}
+                  >
+                    edit in Bills screen
+                  </Text>
+                </Text>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 12 }}>
+                  <Text style={{ fontSize: 13, color: colors.textMid }}>This month only</Text>
+                  <Switch
+                    value={thisMonthOnly}
+                    onValueChange={(val) => handleToggleMonthOnly(val, editingCell)}
+                    trackColor={{ false: colors.borderMuted, true: colors.bill }}
+                    thumbColor={colors.surface}
+                  />
+                </View>
+              )}
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => { setEditingCell(null); setThisMonthOnly(false); }}>
                   <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: thisMonthOnly ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: !editingCell.isBill && thisMonthOnly ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
                   <Text style={{ color: colors.surface, fontWeight: '600' }}>Save</Text>
                 </TouchableOpacity>
               </View>
