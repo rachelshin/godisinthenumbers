@@ -295,7 +295,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const isOverridden = hasOverride(tier, subPlanKey);
               const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.text + '14' : undefined;
               return (
-                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg, borderRadius: 8, marginHorizontal: 6 }]}>
+                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg, borderRadius: 8, marginHorizontal: 6, marginVertical: 2 }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
@@ -358,7 +358,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.text + '14' : colors.bg;
               const highlighted = overBudget || fullyUsed;
               return (
-                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }, highlighted && { borderRadius: 8, marginHorizontal: 6, borderBottomWidth: 0 }]}>
+                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }, highlighted && { borderRadius: 8, marginHorizontal: 6, marginVertical: 2, borderBottomWidth: 0 }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
