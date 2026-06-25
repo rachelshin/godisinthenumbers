@@ -99,7 +99,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     else console.log('[no orphaned keys]');
   }, [monthlyActual, categories]); // eslint-disable-line
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  const fmtAmt = (n) => n < 0 ? `-$${fmt(Math.abs(n))}` : `$${fmt(n)}`;
+  const fmtAmt = (n) => { const abs = fmt(Math.abs(n)); return (n < 0 && abs !== '0') ? `-$${abs}` : `$${abs}`; };
 
   const subTotal = (tier, cat) =>
     cat.subcategories.reduce((sum, sub) => {
