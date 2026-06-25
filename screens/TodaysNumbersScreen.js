@@ -55,9 +55,31 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
   const [editing, setEditing] = useState(null);
   const [balanceModalVisible, setBalanceModalVisible] = useState(false);
   const [balanceInput, setBalanceInput] = useState('');
+  const [paycheckDateInput, setPaycheckDateInput] = useState('');
 
   const balanceIsToday = bankBalance.updatedAt &&
     new Date(bankBalance.updatedAt).toDateString() === new Date().toDateString();
+
+  const computeAvailable = (amount, paycheckDate) => {
+    if (amount == null || !paycheckDate) return amount;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const paycheck = new Date(paycheckDate + 'T00:00:00');
+    if (paycheck <= today) return amount;
+    let billsTotal = 0;
+    bills.forEach(bill => {
+      if (!bill.amount || bill.amount <= 0) return;
+      let d = new Date(today.getFullYear(), today.getMonth(), bill.dayOfMonth);
+      if (d <= today) d = new Date(today.getFullYear(), today.getMonth() + 1, bill.dayOfMonth);
+      while (d <= paycheck) {
+        const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!bill.skippedMonths?.includes(mk)) billsTotal += bill.amount;
+        d = new Date(d.getFullYear(), d.getMonth() + 1, bill.dayOfMonth);
+      }
+    });
+    return amount - billsTotal;
+  };
+
+  const availableAmount = computeAvailable(bankBalance.amount, bankBalance.paycheckDate);
 
   const todayPurchases = purchases.filter(
     p => new Date(p.date).toDateString() === new Date().toDateString()
@@ -105,12 +127,12 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
         </Text>
 
         <View style={styles.statCard}>
-          <TouchableOpacity style={styles.statCell} onPress={() => { setBalanceInput(bankBalance.amount != null ? bankBalance.amount.toString() : ''); setBalanceModalVisible(true); }} activeOpacity={0.7}>
-            <Text style={styles.balanceLabel}>in the bank</Text>
-            {bankBalance.amount != null ? (
+          <TouchableOpacity style={styles.statCell} onPress={() => { setBalanceInput(bankBalance.amount != null ? bankBalance.amount.toString() : ''); setPaycheckDateInput(bankBalance.paycheckDate || ''); setBalanceModalVisible(true); }} activeOpacity={0.7}>
+            <Text style={styles.balanceLabel}>available</Text>
+            {availableAmount != null ? (
               <>
                 <Text style={styles.balanceAmount} numberOfLines={1}>
-                  ${bankBalance.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${availableAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
                 {!balanceIsToday && <Text style={styles.balanceStaleBadge}>tap to update</Text>}
               </>
@@ -220,7 +242,7 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
       <Modal visible={balanceModalVisible} transparent animationType="fade" onRequestClose={() => setBalanceModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={layout.modalOverlay}>
           <View style={layout.modalBox}>
-            <Text style={[layout.modalTitle, { marginBottom: 4 }]}>In the bank today</Text>
+            <Text style={[layout.modalTitle, { marginBottom: 4 }]}>Bank balance</Text>
             <Text style={[styles.balanceStaleBadge, { textAlign: 'center', marginBottom: 16 }]}>
               enter your current balance
             </Text>
@@ -234,6 +256,27 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
               autoFocus
               textAlign="center"
             />
+            <Text style={[styles.balanceStaleBadge, { textAlign: 'center', marginBottom: 8, marginTop: 16 }]}>
+              next paycheck
+            </Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                value={paycheckDateInput}
+                min={new Date().toLocaleDateString('en-CA')}
+                onChange={e => setPaycheckDateInput(e.target.value)}
+                style={{ fontSize: 16, border: 'none', borderBottom: `1px solid ${colors.border}`, backgroundColor: 'transparent', color: paycheckDateInput ? colors.textDark : colors.textLight, textAlign: 'center', width: '100%', paddingBottom: 8, marginBottom: 16, outline: 'none' }}
+              />
+            ) : (
+              <TextInput
+                style={[styles.amountInput, { fontSize: 14 }]}
+                value={paycheckDateInput}
+                onChangeText={setPaycheckDateInput}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={colors.textLight}
+                textAlign="center"
+              />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => setBalanceModalVisible(false)}>
                 <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
@@ -242,7 +285,7 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
                 style={[layout.modalBtn, { backgroundColor: colors.rose, flex: 2 }]}
                 onPress={() => {
                   const amt = parseFloat(balanceInput.replace(/[^0-9.]/g, ''));
-                  if (!isNaN(amt) && amt >= 0) { onUpdateBankBalance(amt); }
+                  if (!isNaN(amt) && amt >= 0) { onUpdateBankBalance(amt, paycheckDateInput || null); }
                   setBalanceModalVisible(false);
                 }}
               >

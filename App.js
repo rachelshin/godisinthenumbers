@@ -7,7 +7,13 @@ import {
 
 if (Platform.OS === 'web') {
   const s = document.createElement('style');
-  s.textContent = 'input:focus, textarea:focus { outline: none !important; box-shadow: none !important; }';
+  s.textContent = [
+    'input:focus, textarea:focus { outline: none !important; box-shadow: none !important; }',
+    'input[type="date"] { -webkit-appearance: none; appearance: none; }',
+    'input[type="date"]::-webkit-datetime-edit-day-field:focus,',
+    'input[type="date"]::-webkit-datetime-edit-month-field:focus,',
+    'input[type="date"]::-webkit-datetime-edit-year-field:focus { background-color: #ede5df; border-radius: 2px; }',
+  ].join('\n');
   document.head.appendChild(s);
 }
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +37,7 @@ import ViewUserScreen      from './screens/ViewUserScreen';
 import InfoModal           from './components/InfoModal';
 
 const TABS = [
-  { key: 'Today',         label: 'Today' },
+  { key: 'Today',         label: 'Numbers' },
   { key: 'Spending Plan', label: 'Spending Plan' },
   { key: 'Records',       label: 'Records' },
 ];

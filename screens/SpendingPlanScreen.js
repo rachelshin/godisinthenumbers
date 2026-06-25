@@ -214,7 +214,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     <>
       {showActuals && (
         <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>
-          actual / planned
+          remaining / planned
         </Text>
       )}
       {tierCats.map((cat, index) => {
@@ -241,11 +241,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               <Text style={[styles.catName, { color: palette.text }]}>{cat.name}</Text>
               <Text style={[styles.catTotal, { color: catOverBudget ? colors.rose : catTotal > 0 || catActual !== 0 ? palette.text : palette.text + '55', fontWeight: catOverBudget ? '700' : 'normal' }]}>
                 {showActuals && catActual !== 0 && catTotal > 0
-                  ? `$${fmt(catActual)} / $${fmt(catTotal)}`
+                  ? `$${fmt(catTotal - catActual)} / $${fmt(catTotal)}`
                   : catTotal > 0
                   ? `$${fmt(catTotal)}`
                   : showActuals && catActual !== 0
-                  ? `$${fmt(catActual)}`
+                  ? `$${fmt(-catActual)}`
                   : '—'}
               </Text>
               <Text style={[styles.catChevron, { color: palette.text }]}>{isExpanded ? '∨' : '›'}</Text>
@@ -283,11 +283,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
                     <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : isOverridden ? colors.bill : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
                       {showActuals && displayBudget > 0
-                        ? `$${fmt(actual)} / $${fmt(displayBudget)}`
+                        ? `$${fmt(displayBudget - actual)} / $${fmt(displayBudget)}`
                         : displayBudget > 0
                         ? `$${fmt(displayBudget)}`
                         : showActuals && actual !== 0
-                        ? `$${fmt(actual)}`
+                        ? `$${fmt(-actual)}`
                         : '—'}
                     </Text>
                     <Text style={historyStyles.editHint}>Edit</Text>
@@ -336,7 +336,9 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                   >
                     {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
                     {showActuals && actual !== 0 && (
-                      <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>${fmt(actual)}</Text>
+                      <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>
+                        {val ? `$${fmt(budget - actual)}` : `$${fmt(-actual)}`}
+                      </Text>
                     )}
                     {showActuals && actual !== 0 && val ? (
                       <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>

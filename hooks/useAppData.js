@@ -415,8 +415,8 @@ export function useAppData() {
     if (userRef.current) fsSaveSobriety(userRef.current.uid, s).catch(console.warn);
   }, []);
 
-  const updateBankBalance = useCallback((amount) => {
-    const next = { amount, updatedAt: new Date().toISOString() };
+  const updateBankBalance = useCallback((amount, paycheckDate) => {
+    const next = { amount, updatedAt: new Date().toISOString(), paycheckDate: paycheckDate || null };
     setBankBalance(next);
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     saveItem(keys.bankBalance, next);
