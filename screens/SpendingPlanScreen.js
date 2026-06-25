@@ -290,12 +290,12 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const overrideVal = planOverrides?.[monthKey]?.[tier]?.[subPlanKey];
               const basePlan = parseFloat(basePlanForMonth(tier, subPlanKey, monthKey) || '0') || 0;
               const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
-              const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
+              const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && Math.round(actual) > Math.round(displayBudget);
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && displayBudget > 0 && Math.round(actual) >= Math.round(displayBudget);
               const isOverridden = hasOverride(tier, subPlanKey);
-              const rowBg = overBudget ? palette.text + '60' : fullyUsed ? palette.text + '30' : undefined;
+              const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.text + '14' : undefined;
               return (
-                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg, borderRadius: 12 }]}>
+                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg, borderRadius: 8, marginHorizontal: 6 }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
@@ -350,15 +350,15 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const val = effectiveBudget(tier, subPlanKey) || '';
               const actual = showActuals ? (monthlyActual[subPlanKey] || 0) : 0;
               const budget = parseFloat(val) || 0;
-              const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && actual > budget;
+              const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && Math.round(actual) > Math.round(budget);
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && budget > 0 && Math.round(actual) >= Math.round(budget);
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);
               const isOverridden = hasOverride(tier, subPlanKey);
               const actualColor = overBudget ? colors.rose : palette.text;
-              const rowBg = overBudget ? palette.text + '60' : fullyUsed ? palette.text + '30' : colors.bg;
+              const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.text + '14' : colors.bg;
               const highlighted = overBudget || fullyUsed;
               return (
-                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }, highlighted && { borderRadius: 12, borderBottomWidth: 0 }]}>
+                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }, highlighted && { borderRadius: 8, marginHorizontal: 6, borderBottomWidth: 0 }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
