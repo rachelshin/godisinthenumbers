@@ -293,9 +293,9 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && displayBudget > 0 && Math.round(actual) >= Math.round(displayBudget);
               const isOverridden = hasOverride(tier, subPlanKey);
-              const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.bg + 'CC' : undefined;
+              const rowBg = overBudget ? palette.text + '60' : fullyUsed ? palette.text + '30' : undefined;
               return (
-                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg }]}>
+                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg, borderRadius: 12 }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
@@ -355,9 +355,10 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);
               const isOverridden = hasOverride(tier, subPlanKey);
               const actualColor = overBudget ? colors.rose : palette.text;
-              const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.bg + 'CC' : colors.bg;
+              const rowBg = overBudget ? palette.text + '60' : fullyUsed ? palette.text + '30' : colors.bg;
+              const highlighted = overBudget || fullyUsed;
               return (
-                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }]}>
+                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }, highlighted && { borderRadius: 12, borderBottomWidth: 0 }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
