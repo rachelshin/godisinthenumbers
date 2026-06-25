@@ -31,6 +31,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const [cellValue, setCellValue] = useState('');
   const [thisMonthOnly, setThisMonthOnly] = useState(false);
   const [viewingEntriesFor, setViewingEntriesFor] = useState(null);
+  const [showAvailable, setShowAvailable] = useState(true);
   const [manageModal, setManageModal] = useState(false);
   const [idealManageModal, setIdealManageModal] = useState(false);
   const [miniManageModal, setMiniManageModal] = useState(false);
@@ -238,7 +239,16 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
             <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>earned / planned</Text>
           )}
           {showActuals && showExpenseHeader && (
-            <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginTop: 8, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>remaining / spent / planned</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingRight: 38, marginTop: 8, marginBottom: 4, gap: 4 }}>
+              <TouchableOpacity onPress={() => setShowAvailable(true)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 2 }}>
+                <Text style={{ fontSize: 10, fontStyle: 'italic', letterSpacing: 0.3, color: showAvailable ? colors.textMid : colors.textLight, textDecorationLine: showAvailable ? 'underline' : 'none' }}>available</Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 10, color: colors.textLight }}>·</Text>
+              <TouchableOpacity onPress={() => setShowAvailable(false)} hitSlop={{ top: 6, bottom: 6, left: 2, right: 6 }}>
+                <Text style={{ fontSize: 10, fontStyle: 'italic', letterSpacing: 0.3, color: !showAvailable ? colors.textMid : colors.textLight, textDecorationLine: !showAvailable ? 'underline' : 'none' }}>spent</Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 10, color: colors.textLight, fontStyle: 'italic', letterSpacing: 0.3 }}> / planned</Text>
+            </View>
           )}
           <View>
             <TouchableOpacity
@@ -257,11 +267,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     ? `$${fmt(catActual)}`
                     : '—'
                   : showActuals && catActual !== 0 && catTotal > 0
-                  ? `${fmtAmt(catTotal - catActual)} / $${fmt(catActual)} / $${fmt(catTotal)}`
+                  ? `${showAvailable ? fmtAmt(catTotal - catActual) : `$${fmt(catActual)}`} / $${fmt(catTotal)}`
                   : catTotal > 0
                   ? `$${fmt(catTotal)}`
                   : showActuals && catActual !== 0
-                  ? `${fmtAmt(-catActual)}`
+                  ? showAvailable ? `${fmtAmt(-catActual)}` : `$${fmt(catActual)}`
                   : '—'}
               </Text>
               <Text style={[styles.catChevron, { color: palette.text }]}>{isExpanded ? '∨' : '›'}</Text>
@@ -281,9 +291,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const basePlan = parseFloat(basePlanForMonth(tier, subPlanKey, monthKey) || '0') || 0;
               const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && actual > displayBudget;
+              const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && displayBudget > 0 && Math.round(actual) >= Math.round(displayBudget);
               const isOverridden = hasOverride(tier, subPlanKey);
+              const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.bg + 'CC' : undefined;
               return (
-                <View key={sub} style={historyStyles.summaryRow}>
+                <View key={sub} style={[historyStyles.summaryRow, rowBg && { backgroundColor: rowBg }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
@@ -305,11 +317,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                           : showActuals && actual !== 0 ? `$${fmt(actual)}`
                           : '—'
                         : showActuals && displayBudget > 0
-                        ? `${fmtAmt(displayBudget - actual)} / $${fmt(actual)} / $${fmt(displayBudget)}`
+                        ? `${showAvailable ? fmtAmt(displayBudget - actual) : `$${fmt(actual)}`} / $${fmt(displayBudget)}`
                         : displayBudget > 0
                         ? `$${fmt(displayBudget)}`
                         : showActuals && actual !== 0
-                        ? `${fmtAmt(-actual)}`
+                        ? showAvailable ? `${fmtAmt(-actual)}` : `$${fmt(actual)}`
                         : '—'}
                     </Text>
                     <Text style={historyStyles.editHint}>Edit</Text>
@@ -339,11 +351,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const actual = showActuals ? (monthlyActual[subPlanKey] || 0) : 0;
               const budget = parseFloat(val) || 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && actual > budget;
+              const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && budget > 0 && Math.round(actual) >= Math.round(budget);
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);
               const isOverridden = hasOverride(tier, subPlanKey);
               const actualColor = overBudget ? colors.rose : palette.text;
+              const rowBg = overBudget ? palette.text + '28' : fullyUsed ? palette.bg + 'CC' : colors.bg;
               return (
-                <View key={sub} style={styles.subRow}>
+                <View key={sub} style={[styles.subRow, { backgroundColor: rowBg }]}>
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     onPress={() => setViewingEntriesFor({ catName: cat.name, sub })}
@@ -373,14 +387,10 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                       <>
                         {showActuals && actual !== 0 && (
                           <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>
-                            {val ? fmtAmt(budget - actual) : fmtAmt(-actual)}
+                            {val
+                              ? showAvailable ? fmtAmt(budget - actual) : `$${fmt(actual)}`
+                              : showAvailable ? fmtAmt(-actual) : `$${fmt(actual)}`}
                           </Text>
-                        )}
-                        {showActuals && actual !== 0 && val && (
-                          <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
-                        )}
-                        {showActuals && actual !== 0 && val && (
-                          <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
                         )}
                         {showActuals && actual !== 0 && val ? (
                           <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
@@ -403,7 +413,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         <Text style={styles.totalLabel}>Total</Text>
         <Text style={[styles.totalAmount, { color: accentColor }]}>
           {showActuals && totalActual > 0 && totalBudgeted > 0
-            ? `${fmtAmt(totalBudgeted - totalActual)} / $${fmt(totalActual)} / $${fmt(totalBudgeted)}`
+            ? `${showAvailable ? fmtAmt(totalBudgeted - totalActual) : `$${fmt(totalActual)}`} / $${fmt(totalBudgeted)}`
             : totalBudgeted > 0
             ? `$${fmt(totalBudgeted)}`
             : showActuals && totalActual > 0
