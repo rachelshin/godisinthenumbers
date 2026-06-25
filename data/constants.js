@@ -171,6 +171,7 @@ export const TIER_META = {
 export const STORAGE_KEYS = {
   categories:      'numbers_categories',
   idealCategories: 'numbers_ideal_categories',
+  miniCategories:  'numbers_mini_categories',
   plan:            'numbers_plan',
   planOverrides:   'numbers_plan_overrides',
   planVersions:    'numbers_plan_versions',
@@ -183,6 +184,7 @@ export const STORAGE_KEYS = {
 export const BDA_STORAGE_KEYS = {
   categories:      'bda_categories',
   idealCategories: 'bda_ideal_categories',
+  miniCategories:  'bda_mini_categories',
   plan:            'bda_plan',
   planOverrides:   'bda_plan_overrides',
   planVersions:    'bda_plan_versions',

@@ -24,6 +24,7 @@ export function useAppData() {
   const [mode, setMode]                         = useState('personal');
   const [categories, setCategories]             = useState(DEFAULT_CATEGORIES);
   const [idealCategories, setIdealCategories]   = useState(DEFAULT_CATEGORIES);
+  const [miniCategories, setMiniCategories]     = useState(DEFAULT_CATEGORIES);
   const [plan, setPlan]                         = useState({ Ideal: {}, Realistic: {}, Mini: {} });
   const [planOverrides, setPlanOverrides]       = useState({});
   const [planVersions, setPlanVersions]         = useState({});
@@ -58,9 +59,10 @@ export function useAppData() {
       const savedMode   = await loadItem('numbers_mode', 'personal');
       const keys        = savedMode === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
       const defaultCats = savedMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-      const [cats, idealCats, pl, po, pv, purch, bal, bls, sober, sg] = await Promise.all([
+      const [cats, idealCats, miniCats, pl, po, pv, purch, bal, bls, sober, sg] = await Promise.all([
         loadItem(keys.categories,      defaultCats),
         loadItem(keys.idealCategories, defaultCats),
+        loadItem(keys.miniCategories,  defaultCats),
         loadItem(keys.plan,            { Ideal: {}, Realistic: {}, Mini: {} }),
         loadItem(keys.planOverrides,   {}),
         loadItem(keys.planVersions,    {}),
@@ -72,8 +74,10 @@ export function useAppData() {
       ]);
       const migratedCats = savedMode === 'personal' ? ensureSavingsCategory(cats) : cats;
       const migratedIdealCats = savedMode === 'personal' ? ensureSavingsCategory(idealCats) : idealCats;
+      const migratedMiniCats = savedMode === 'personal' ? ensureSavingsCategory(miniCats) : miniCats;
       if (migratedCats !== cats) saveItem(keys.categories, migratedCats);
       if (migratedIdealCats !== idealCats) saveItem(keys.idealCategories, migratedIdealCats);
+      if (migratedMiniCats !== miniCats) saveItem(keys.miniCategories, migratedMiniCats);
       modeRef.current           = savedMode;
       purchasesRef.current      = purch;
       planRef.current           = pl;
@@ -83,6 +87,7 @@ export function useAppData() {
       setMode(savedMode);
       setCategories(migratedCats);
       setIdealCategories(migratedIdealCats);
+      setMiniCategories(migratedMiniCats);
       setPlan(pl);
       setPlanOverrides(po);
       setPlanVersions(pv);
@@ -117,8 +122,10 @@ export function useAppData() {
     const defaultCats = isBiz ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
     const rawCats     = meta?.categories      || defaultCats;
     const rawIdealCats= meta?.idealCategories || defaultCats;
+    const rawMiniCats = meta?.miniCategories  || defaultCats;
     const cats        = !isBiz ? ensureSavingsCategory(rawCats) : rawCats;
     const idealCats   = !isBiz ? ensureSavingsCategory(rawIdealCats) : rawIdealCats;
+    const miniCats    = !isBiz ? ensureSavingsCategory(rawMiniCats) : rawMiniCats;
     const pl          = meta?.plan            || { Ideal: {}, Realistic: {}, Mini: {} };
     const po          = meta?.planOverrides   || {};
     const pv          = meta?.planVersions    || {};
@@ -128,6 +135,7 @@ export function useAppData() {
     const purch       = isBiz ? bdaPurch : personalPurch;
     if (cats !== rawCats) fsSaveMeta(uid, savedMode, { categories: cats }).catch(console.warn);
     if (idealCats !== rawIdealCats) fsSaveMeta(uid, savedMode, { idealCategories: idealCats }).catch(console.warn);
+    if (miniCats !== rawMiniCats) fsSaveMeta(uid, savedMode, { miniCategories: miniCats }).catch(console.warn);
     modeRef.current           = savedMode;
     purchasesRef.current      = purch;
     planRef.current           = pl;
@@ -137,6 +145,7 @@ export function useAppData() {
     setMode(savedMode);
     setCategories(cats);
     setIdealCategories(idealCats);
+    setMiniCategories(miniCats);
     setPlan(pl);
     setPlanOverrides(po);
     setPlanVersions(pv);
@@ -177,6 +186,7 @@ export function useAppData() {
         setMode('personal');
         setCategories(DEFAULT_CATEGORIES);
         setIdealCategories(DEFAULT_CATEGORIES);
+        setMiniCategories(DEFAULT_CATEGORIES);
         setPlan(empty);
         setPlanOverrides({});
         setPurchases([]);
@@ -198,7 +208,7 @@ export function useAppData() {
     setModeSwitching(true);
     const keys        = newMode === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     const defaultCats = newMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-    let cats, idealCats, pl, po, pv, purch, bal, bls, sg;
+    let cats, idealCats, miniCats, pl, po, pv, purch, bal, bls, sg;
     let fromFirestore = false;
     if (userRef.current) {
       try {
@@ -208,6 +218,7 @@ export function useAppData() {
         ]);
         cats      = meta?.categories      || defaultCats;
         idealCats = meta?.idealCategories || defaultCats;
+        miniCats  = meta?.miniCategories  || defaultCats;
         pl        = meta?.plan            || { Ideal: {}, Realistic: {}, Mini: {} };
         po        = meta?.planOverrides   || {};
         pv        = meta?.planVersions    || {};
@@ -221,9 +232,10 @@ export function useAppData() {
       }
     }
     if (!fromFirestore) {
-      [cats, idealCats, pl, po, pv, purch, bal, bls, sg] = await Promise.all([
+      [cats, idealCats, miniCats, pl, po, pv, purch, bal, bls, sg] = await Promise.all([
         loadItem(keys.categories,      defaultCats),
         loadItem(keys.idealCategories, defaultCats),
+        loadItem(keys.miniCategories,  defaultCats),
         loadItem(keys.plan,            { Ideal: {}, Realistic: {}, Mini: {} }),
         loadItem(keys.planOverrides,   {}),
         loadItem(keys.planVersions,    {}),
@@ -236,8 +248,10 @@ export function useAppData() {
     if (newMode === 'personal') {
       const migratedCats = ensureSavingsCategory(cats);
       const migratedIdeal = ensureSavingsCategory(idealCats);
+      const migratedMini = ensureSavingsCategory(miniCats);
       if (migratedCats !== cats) { cats = migratedCats; if (fromFirestore && userRef.current) fsSaveMeta(userRef.current.uid, newMode, { categories: cats }).catch(console.warn); else saveItem(keys.categories, cats); }
       if (migratedIdeal !== idealCats) { idealCats = migratedIdeal; if (fromFirestore && userRef.current) fsSaveMeta(userRef.current.uid, newMode, { idealCategories: idealCats }).catch(console.warn); else saveItem(keys.idealCategories, idealCats); }
+      if (migratedMini !== miniCats) { miniCats = migratedMini; if (fromFirestore && userRef.current) fsSaveMeta(userRef.current.uid, newMode, { miniCategories: miniCats }).catch(console.warn); else saveItem(keys.miniCategories, miniCats); }
     }
     modeRef.current           = newMode;
     purchasesRef.current      = purch;
@@ -247,6 +261,7 @@ export function useAppData() {
     billsRef.current          = bls;
     setCategories(cats);
     setIdealCategories(idealCats);
+    setMiniCategories(miniCats);
     setPlan(pl);
     setPlanOverrides(po || {});
     setPlanVersions(pv || {});
@@ -273,6 +288,13 @@ export function useAppData() {
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
     saveItem(keys.idealCategories, cats);
     if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { idealCategories: cats }).catch(console.warn);
+  }, []);
+
+  const updateMiniCategories = useCallback((cats) => {
+    setMiniCategories(cats);
+    const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
+    saveItem(keys.miniCategories, cats);
+    if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { miniCategories: cats }).catch(console.warn);
   }, []);
 
   const updatePlan = useCallback((pl) => {
@@ -433,11 +455,11 @@ export function useAppData() {
   const visiblePurchases = purchases.filter(p => !p.deleted);
 
   return {
-    mode, categories, idealCategories, plan, planOverrides, planVersions, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
+    mode, categories, idealCategories, miniCategories, plan, planOverrides, planVersions, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
-    updateCategories, updateIdealCategories, updatePlan, updatePlanOverride, updatePlanVersions,
+    updateCategories, updateIdealCategories, updateMiniCategories, updatePlan, updatePlanOverride, updatePlanVersions,
     addPurchase, deletePurchase, updatePurchase,
     addBill, updateBill, deleteBill,
     updateSobriety, updateBankBalance, updateSavingsGoals,

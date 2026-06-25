@@ -21,7 +21,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 const MAIN_TIER = 'Realistic';
 const ALT_TIERS = ['Ideal', 'Mini'];
 
-export default function SpendingPlanScreen({ mode, categories, idealCategories, plan, planOverrides = {}, planVersions = {}, onUpdatePlan, onUpdatePlanOverride, onUpdatePlanVersions, onUpdateCategories, onUpdateIdealCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
+export default function SpendingPlanScreen({ mode, categories, idealCategories, miniCategories, plan, planOverrides = {}, planVersions = {}, onUpdatePlan, onUpdatePlanOverride, onUpdatePlanVersions, onUpdateCategories, onUpdateIdealCategories, onUpdateMiniCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
   const activePlanColors = mode === 'business' ? BDA_PLAN_CATEGORY_COLORS : PLAN_CATEGORY_COLORS;
   const [altTier, setAltTier] = useState(null);
   const [billsVisible, setBillsVisible] = useState(false);
@@ -33,6 +33,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const [viewingEntriesFor, setViewingEntriesFor] = useState(null);
   const [manageModal, setManageModal] = useState(false);
   const [idealManageModal, setIdealManageModal] = useState(false);
+  const [miniManageModal, setMiniManageModal] = useState(false);
   const [savingsGoalsVisible, setSavingsGoalsVisible] = useState(false);
 
   const now = new Date();
@@ -48,7 +49,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   };
 
   const planKey = (catName, sub) => `${catName} > ${sub}`;
-  const catsForTier = (tier) => tier === 'Ideal' ? idealCategories : categories;
+  const catsForTier = (tier) => tier === MAIN_TIER ? categories : tier === 'Ideal' ? idealCategories : miniCategories;
 
   const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
 
@@ -213,12 +214,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
     return (
     <>
-      {showActuals && (
-        <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>
-          remaining / spent / planned
-        </Text>
-      )}
       {tierCats.map((cat, index) => {
+        const prevCat = index > 0 ? tierCats[index - 1] : null;
+        const isIncome = isIncomeCat(cat.name);
+        const showIncomeHeader = isIncome && (!prevCat || !isIncomeCat(prevCat.name));
+        const showExpenseHeader = !isIncome && (!prevCat || isIncomeCat(prevCat.name));
         const palette = activePlanColors[index % activePlanColors.length];
         const isExpanded = expandedCategory === cat.name;
 
@@ -233,7 +233,14 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         const catOverBudget = showActuals && !isIncomeCat(cat.name) && catActual > catTotal && catTotal > 0;
 
         return (
-          <View key={cat.id}>
+          <React.Fragment key={cat.id}>
+          {showActuals && showIncomeHeader && (
+            <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>earned / planned</Text>
+          )}
+          {showActuals && showExpenseHeader && (
+            <Text style={{ fontSize: 10, color: colors.textLight, textAlign: 'right', paddingRight: 38, marginTop: 8, marginBottom: 4, fontStyle: 'italic', letterSpacing: 0.3 }}>remaining / spent / planned</Text>
+          )}
+          <View>
             <TouchableOpacity
               style={[styles.catRow, { backgroundColor: palette.bg, borderWidth: 1, borderColor: palette.text + '30' }]}
               onPress={() => setExpandedCategory(isExpanded ? null : cat.name)}
@@ -241,7 +248,15 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
             >
               <Text style={[styles.catName, { color: palette.text }]}>{cat.name}</Text>
               <Text style={[styles.catTotal, { color: catOverBudget ? colors.rose : catTotal > 0 || catActual !== 0 ? palette.text : palette.text + '55', fontWeight: catOverBudget ? '700' : 'normal' }]}>
-                {showActuals && catActual !== 0 && catTotal > 0
+                {isIncome
+                  ? showActuals && catActual !== 0 && catTotal > 0
+                    ? `$${fmt(catActual)} / $${fmt(catTotal)}`
+                    : catTotal > 0
+                    ? `$${fmt(catTotal)}`
+                    : showActuals && catActual !== 0
+                    ? `$${fmt(catActual)}`
+                    : '—'
+                  : showActuals && catActual !== 0 && catTotal > 0
                   ? `${fmtAmt(catTotal - catActual)} / $${fmt(catActual)} / $${fmt(catTotal)}`
                   : catTotal > 0
                   ? `$${fmt(catTotal)}`
@@ -283,7 +298,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                   >
                     {hasBills && <Text style={{ fontSize: 12, color: palette.text, marginRight: 4 }}>↻</Text>}
                     <Text style={[historyStyles.summaryRowAmount, { color: overBudget ? colors.rose : isOverridden ? colors.bill : palette.text, fontWeight: overBudget ? '700' : 'normal' }]}>
-                      {showActuals && displayBudget > 0
+                      {isIncome
+                        ? showActuals && actual !== 0 && displayBudget > 0
+                          ? `$${fmt(actual)} / $${fmt(displayBudget)}`
+                          : displayBudget > 0 ? `$${fmt(displayBudget)}`
+                          : showActuals && actual !== 0 ? `$${fmt(actual)}`
+                          : '—'
+                        : showActuals && displayBudget > 0
                         ? `${fmtAmt(displayBudget - actual)} / $${fmt(actual)} / $${fmt(displayBudget)}`
                         : displayBudget > 0
                         ? `$${fmt(displayBudget)}`
@@ -336,28 +357,45 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     activeOpacity={0.7}
                   >
                     {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
-                    {showActuals && actual !== 0 && (
-                      <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>
-                        {val ? fmtAmt(budget - actual) : fmtAmt(-actual)}
-                      </Text>
+                    {isIncome ? (
+                      <>
+                        {showActuals && actual !== 0 && (
+                          <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
+                        )}
+                        {showActuals && actual !== 0 && val && (
+                          <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
+                        )}
+                        <Text style={[styles.subAmount, { color: val ? (showActuals && actual !== 0 ? colors.textLight : palette.text) : colors.textLight }]}>
+                          {val ? `$${fmt(parseFloat(val))}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        {showActuals && actual !== 0 && (
+                          <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>
+                            {val ? fmtAmt(budget - actual) : fmtAmt(-actual)}
+                          </Text>
+                        )}
+                        {showActuals && actual !== 0 && val && (
+                          <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
+                        )}
+                        {showActuals && actual !== 0 && val && (
+                          <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
+                        )}
+                        {showActuals && actual !== 0 && val ? (
+                          <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
+                        ) : null}
+                        <Text style={[styles.subAmount, { color: val ? (showActuals && actual !== 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
+                          {val ? `$${fmt(parseFloat(val))}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
+                        </Text>
+                      </>
                     )}
-                    {showActuals && actual !== 0 && val && (
-                      <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
-                    )}
-                    {showActuals && actual !== 0 && val && (
-                      <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
-                    )}
-                    {showActuals && actual !== 0 && val ? (
-                      <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
-                    ) : null}
-                    <Text style={[styles.subAmount, { color: val ? (showActuals && actual !== 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
-                      {val ? `$${fmt(parseFloat(val))}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
-                    </Text>
                   </TouchableOpacity>
                 </View>
               );
             })}
           </View>
+          </React.Fragment>
         );
       })}
 
@@ -540,25 +578,26 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
             ${grandTotal(altTier).toLocaleString('en-US', { minimumFractionDigits: 0 })}
           </Text>
         </View>
-        {monthNav}
         <ScrollView style={layout.scroll} contentContainerStyle={layout.scrollContent}>
           {renderPlanList(altTier)}
-          {altTier === 'Ideal' && (
-            <TouchableOpacity style={[layout.ghostButton, { marginTop: 8 }]} onPress={() => setIdealManageModal(true)}>
-              <Text style={layout.ghostButtonText}>Edit categories</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={[layout.ghostButton, { marginTop: 8 }]} onPress={() => altTier === 'Ideal' ? setIdealManageModal(true) : setMiniManageModal(true)}>
+            <Text style={layout.ghostButtonText}>Edit categories</Text>
+          </TouchableOpacity>
         </ScrollView>
         {renderEditModal(meta.color)}
         {renderEntriesModal()}
-        {altTier === 'Ideal' && (
-          <ManageCategoriesModal
-            visible={idealManageModal}
-            categories={idealCategories}
-            onSave={(cats) => { onUpdateIdealCategories(cats); setIdealManageModal(false); }}
-            onClose={() => setIdealManageModal(false)}
-          />
-        )}
+        <ManageCategoriesModal
+          visible={idealManageModal}
+          categories={idealCategories}
+          onSave={(cats) => { onUpdateIdealCategories(cats); setIdealManageModal(false); }}
+          onClose={() => setIdealManageModal(false)}
+        />
+        <ManageCategoriesModal
+          visible={miniManageModal}
+          categories={miniCategories}
+          onSave={(cats) => { onUpdateMiniCategories(cats); setMiniManageModal(false); }}
+          onClose={() => setMiniManageModal(false)}
+        />
       </View>
     );
   }
