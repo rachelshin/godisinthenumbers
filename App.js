@@ -44,11 +44,11 @@ const TABS = [
 
 export default function App() {
   const {
-    mode, categories, idealCategories, miniCategories, plan, planOverrides, planVersions, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
+    mode, categories, idealCategories, miniCategories, plan, planOverrides, planVersions, categoryVersions, purchases, visiblePurchases, bankBalance, bills, sobriety, savingsGoals,
     loaded, user, authReady, modeSwitching,
     userRef,
     handleSignOut, switchMode,
-    updateCategories, updateIdealCategories, updateMiniCategories, updatePlan, updatePlanOverride, updatePlanVersions,
+    updateCategories, updateIdealCategories, updateMiniCategories, updatePlan, updatePlanOverride, updatePlanVersions, updateCategoryVersions,
     addPurchase, deletePurchase, updatePurchase,
     addBill, updateBill, deleteBill,
     updateSobriety, updateBankBalance, updateSavingsGoals,
@@ -153,7 +153,7 @@ export default function App() {
 
       <View style={{ flex: 1 }}>
         {tab === 'Today'         && <TodaysNumbersScreen mode={mode} onSwitchMode={switchMode} modeSwitching={modeSwitching} categories={categories} onAdd={addPurchase} onUpdateCategories={updateCategories} purchases={visiblePurchases} onDelete={deletePurchase} onUpdate={updatePurchase} bankBalance={bankBalance} onUpdateBankBalance={updateBankBalance} bills={bills} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
-        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} miniCategories={miniCategories} plan={plan} planOverrides={planOverrides} planVersions={planVersions} onUpdatePlan={updatePlan} onUpdatePlanOverride={updatePlanOverride} onUpdatePlanVersions={updatePlanVersions} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} onUpdateMiniCategories={updateMiniCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} savingsGoals={savingsGoals} onUpdateSavingsGoals={updateSavingsGoals} />}
+        {tab === 'Spending Plan' && <SpendingPlanScreen  mode={mode} categories={categories} idealCategories={idealCategories} miniCategories={miniCategories} plan={plan} planOverrides={planOverrides} planVersions={planVersions} categoryVersions={categoryVersions} onUpdatePlan={updatePlan} onUpdatePlanOverride={updatePlanOverride} onUpdatePlanVersions={updatePlanVersions} onUpdateCategoryVersions={updateCategoryVersions} onUpdateCategories={updateCategories} onUpdateIdealCategories={updateIdealCategories} onUpdateMiniCategories={updateMiniCategories} bills={bills} onAddBill={addBill} onUpdateBill={updateBill} onDeleteBill={deleteBill} purchases={visiblePurchases} savingsGoals={savingsGoals} onUpdateSavingsGoals={updateSavingsGoals} />}
         {tab === 'Records'       && <RecordsScreen       mode={mode} purchases={visiblePurchases} categories={categories} onMonthView={setMonthViewData} bills={bills} onUpdate={updatePurchase} onDelete={deletePurchase} onAdd={addPurchase} onUpdateCategories={updateCategories} sobriety={sobriety} onUpdateSobriety={updateSobriety} />}
       </View>
 

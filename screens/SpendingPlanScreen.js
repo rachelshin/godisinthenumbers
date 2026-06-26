@@ -21,7 +21,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 const MAIN_TIER = 'Realistic';
 const ALT_TIERS = ['Ideal', 'Mini'];
 
-export default function SpendingPlanScreen({ mode, categories, idealCategories, miniCategories, plan, planOverrides = {}, planVersions = {}, onUpdatePlan, onUpdatePlanOverride, onUpdatePlanVersions, onUpdateCategories, onUpdateIdealCategories, onUpdateMiniCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
+export default function SpendingPlanScreen({ mode, categories, idealCategories, miniCategories, plan, planOverrides = {}, planVersions = {}, categoryVersions = {}, onUpdatePlan, onUpdatePlanOverride, onUpdatePlanVersions, onUpdateCategoryVersions, onUpdateCategories, onUpdateIdealCategories, onUpdateMiniCategories, bills, onAddBill, onUpdateBill, onDeleteBill, purchases = [], savingsGoals = {}, onUpdateSavingsGoals }) {
   const activePlanColors = mode === 'business' ? BDA_PLAN_CATEGORY_COLORS : PLAN_CATEGORY_COLORS;
   const [altTier, setAltTier] = useState(null);
   const [billsVisible, setBillsVisible] = useState(false);
@@ -50,9 +50,18 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   };
 
   const planKey = (catName, sub) => `${catName} > ${sub}`;
-  const catsForTier = (tier) => tier === MAIN_TIER ? categories : tier === 'Ideal' ? idealCategories : miniCategories;
 
   const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+
+  const catsForTier = (tier) => {
+    if (tier !== MAIN_TIER) return tier === 'Ideal' ? idealCategories : miniCategories;
+    const keys = Object.keys(categoryVersions).filter(m => m <= monthKey).sort();
+    for (let i = keys.length - 1; i >= 0; i--) {
+      const cats = categoryVersions[keys[i]];
+      if (cats) return cats;
+    }
+    return categories;
+  };
 
   const basePlanForMonth = (tier, key, forMonthKey) => {
     const keys = Object.keys(planVersions).filter(m => m <= forMonthKey).sort();
@@ -658,8 +667,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
 
       <ManageCategoriesModal
         visible={manageModal}
-        categories={categories}
-        onSave={(cats) => { onUpdateCategories(cats); setManageModal(false); }}
+        categories={catsForTier(MAIN_TIER)}
+        onSave={(cats) => {
+          onUpdateCategoryVersions({ ...categoryVersions, [monthKey]: cats });
+          setManageModal(false);
+        }}
         onClose={() => setManageModal(false)}
       />
     </View>
