@@ -72,11 +72,16 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     return plan[tier]?.[key];
   };
 
-  const effectiveBudget = (tier, key) =>
-    tier === MAIN_TIER
-      ? (planOverrides?.[monthKey]?.[tier]?.[key] ?? basePlanForMonth(tier, key, monthKey))
-      : plan[tier]?.[key];
-  const hasOverride = (tier, key) => tier === MAIN_TIER && parseFloat(planOverrides?.[monthKey]?.[tier]?.[key] || '0') > 0;
+  const effectiveBudget = (tier, key) => {
+    if (tier !== MAIN_TIER) return plan[tier]?.[key];
+    const ov = planOverrides?.[monthKey]?.[tier]?.[key];
+    return (ov !== undefined && ov !== '') ? ov : basePlanForMonth(tier, key, monthKey);
+  };
+  const hasOverride = (tier, key) => {
+    if (tier !== MAIN_TIER) return false;
+    const ov = planOverrides?.[monthKey]?.[tier]?.[key];
+    return ov !== undefined && ov !== '';
+  };
 
   const monthlyActual = useMemo(() => {
     const result = {};
@@ -129,15 +134,20 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       .reduce((sum, cat) => sum + (catBudgetFor(tier, cat) ?? subTotal(tier, cat)), 0);
 
   const openCell = (tier, catName, sub) => {
+    const key = planKey(catName, sub);
+    const ov = tier === MAIN_TIER ? planOverrides?.[monthKey]?.[tier]?.[key] : undefined;
+    const hasValidOv = ov !== undefined && ov !== '';
     setEditingCell({ tier, catName, sub });
-    setCellValue(tier === MAIN_TIER ? (basePlanForMonth(tier, planKey(catName, sub), monthKey) || '') : (plan[tier]?.[planKey(catName, sub)] || ''));
-    setThisMonthOnly(false);
+    setThisMonthOnly(hasValidOv);
+    setCellValue(hasValidOv ? ov : tier === MAIN_TIER ? (basePlanForMonth(tier, key, monthKey) || '') : (plan[tier]?.[key] || ''));
   };
 
   const openCatBudget = (tier, catName) => {
+    const ov = tier === MAIN_TIER ? planOverrides?.[monthKey]?.[tier]?.[catName] : undefined;
+    const hasValidOv = ov !== undefined && ov !== '';
     setEditingCell({ tier, catName, sub: null });
-    setCellValue(tier === MAIN_TIER ? (basePlanForMonth(tier, catName, monthKey) || '') : (plan[tier]?.[catName] || ''));
-    setThisMonthOnly(false);
+    setThisMonthOnly(hasValidOv);
+    setCellValue(hasValidOv ? ov : tier === MAIN_TIER ? (basePlanForMonth(tier, catName, monthKey) || '') : (plan[tier]?.[catName] || ''));
   };
 
   const handleToggleMonthOnly = (val, cell) => {
@@ -145,7 +155,8 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     const { tier, catName, sub } = cell;
     const key = sub === null ? catName : planKey(catName, sub);
     if (val) {
-      setCellValue(planOverrides?.[monthKey]?.[tier]?.[key] || '');
+      const ov = planOverrides?.[monthKey]?.[tier]?.[key];
+      setCellValue(ov !== undefined && ov !== '' ? ov : '');
     } else {
       setCellValue(basePlanForMonth(tier, key, monthKey) || '');
     }
@@ -172,17 +183,17 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     }
 
     if (thisMonthOnly) {
+      // Override mode: '' = delete override, '0' = valid $0 override
       const tierOverrides = { ...planOverrides?.[monthKey]?.[tier] };
-      if (!raw || parseFloat(raw) === 0) {
+      if (raw === '') {
         delete tierOverrides[key];
       } else {
         tierOverrides[key] = raw;
       }
-      const next = {
+      onUpdatePlanOverride({
         ...planOverrides,
         [monthKey]: { ...planOverrides?.[monthKey], [tier]: tierOverrides },
-      };
-      onUpdatePlanOverride(next);
+      });
     } else {
       if (sub === null) {
         const entered = parseFloat(raw) || 0;
@@ -194,17 +205,25 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         }
       }
       const key2 = sub === null ? catName : planKey(catName, sub);
+      // Base mode: clear any existing override so base plan takes effect
+      if (tier === MAIN_TIER && planOverrides?.[monthKey]?.[tier]?.[key2] !== undefined) {
+        const tierOverrides = { ...planOverrides?.[monthKey]?.[tier] };
+        delete tierOverrides[key2];
+        onUpdatePlanOverride({
+          ...planOverrides,
+          [monthKey]: { ...planOverrides?.[monthKey], [tier]: tierOverrides },
+        });
+      }
       if (tier !== MAIN_TIER) {
         onUpdatePlan({ ...plan, [tier]: { ...plan[tier], [key2]: raw } });
       } else {
-        const nextVersions = {
+        onUpdatePlanVersions({
           ...planVersions,
           [monthKey]: {
             ...(planVersions[monthKey] || {}),
             [tier]: { ...(planVersions[monthKey]?.[tier] || {}), [key2]: raw },
           },
-        };
-        onUpdatePlanVersions(nextVersions);
+        });
       }
     }
     setEditingCell(null);
@@ -300,8 +319,9 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const hasBills = matchingBills.length > 0;
               const activeBillsTotal = activeBills.reduce((s, b) => s + b.amount, 0);
               const overrideVal = planOverrides?.[monthKey]?.[tier]?.[subPlanKey];
+              const hasValidOverride = overrideVal !== undefined && overrideVal !== '';
               const basePlan = parseFloat(basePlanForMonth(tier, subPlanKey, monthKey) || '0') || 0;
-              const displayBudget = overrideVal !== undefined ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
+              const displayBudget = hasValidOverride ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && Math.round(actual) > Math.round(displayBudget);
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && displayBudget > 0 && Math.round(actual) >= Math.round(displayBudget);
               const isOverridden = hasOverride(tier, subPlanKey);
