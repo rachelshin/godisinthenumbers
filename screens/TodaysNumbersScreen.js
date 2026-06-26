@@ -10,6 +10,7 @@ import styles, { CATEGORY_COLORS, INCOME_COLOR, BDA_CATEGORY_COLORS, BDA_INCOME_
 import historyStyles from '../styles/history';
 import EditEntrySheet from '../components/EditEntrySheet';
 import AddEntrySheet from '../components/AddEntrySheet';
+import ManageCategoriesModal from '../components/ManageCategoriesModal';
 
 const isIncome = (cat) => cat?.name === 'Income' || cat?.name === 'Revenue';
 
@@ -39,7 +40,7 @@ function computeStreak(history) {
 }
 
 
-export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching = false, categories, onAdd, onUpdateCategories, purchases, onDelete, onUpdate, bankBalance, onUpdateBankBalance, bills = [], sobriety = { history: {} }, onUpdateSobriety }) {
+export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching = false, categories, categoryVersions = {}, onUpdateCategoryVersions, onAdd, onUpdateCategories, purchases, onDelete, onUpdate, bankBalance, onUpdateBankBalance, bills = [], sobriety = { history: {} }, onUpdateSobriety }) {
   const isBusiness = mode === 'business';
   const activeCategoryColors = isBusiness ? BDA_CATEGORY_COLORS : CATEGORY_COLORS;
   const activeIncomeColor = isBusiness ? BDA_INCOME_COLOR : INCOME_COLOR;
@@ -53,7 +54,17 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
   const [saved, setSaved] = useState(false);
 
   const [editing, setEditing] = useState(null);
+  const [manageVisible, setManageVisible] = useState(false);
   const [balanceModalVisible, setBalanceModalVisible] = useState(false);
+
+  const todayMonthKey = new Date().toLocaleDateString('en-CA').slice(0, 7);
+  const effectiveCategories = (() => {
+    const keys = Object.keys(categoryVersions).filter(m => m <= todayMonthKey).sort();
+    for (let i = keys.length - 1; i >= 0; i--) {
+      if (categoryVersions[keys[i]]) return categoryVersions[keys[i]];
+    }
+    return categories;
+  })();
   const [balanceInput, setBalanceInput] = useState('');
   const [paycheckDateInput, setPaycheckDateInput] = useState('');
 
@@ -214,6 +225,13 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
         {saved && (
           <Text style={styles.kindNote}>One number at a time. You're doing it.</Text>
         )}
+
+        <TouchableOpacity
+          style={[layout.ghostButton, { marginTop: 16 }]}
+          onPress={() => setManageVisible(true)}
+        >
+          <Text style={layout.ghostButtonText}>Edit categories</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <AddEntrySheet
@@ -295,6 +313,16 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <ManageCategoriesModal
+        visible={manageVisible}
+        categories={effectiveCategories}
+        onSave={(cats) => {
+          onUpdateCategoryVersions({ ...categoryVersions, [todayMonthKey]: cats });
+          setManageVisible(false);
+        }}
+        onClose={() => setManageVisible(false)}
+      />
     </View>
   );
 }
