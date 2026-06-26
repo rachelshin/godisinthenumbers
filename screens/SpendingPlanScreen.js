@@ -76,7 +76,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     tier === MAIN_TIER
       ? (planOverrides?.[monthKey]?.[tier]?.[key] ?? basePlanForMonth(tier, key, monthKey))
       : plan[tier]?.[key];
-  const hasOverride = (tier, key) => tier === MAIN_TIER && planOverrides?.[monthKey]?.[tier]?.[key] !== undefined;
+  const hasOverride = (tier, key) => tier === MAIN_TIER && parseFloat(planOverrides?.[monthKey]?.[tier]?.[key] || '0') > 0;
 
   const monthlyActual = useMemo(() => {
     const result = {};
@@ -172,12 +172,15 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     }
 
     if (thisMonthOnly) {
+      const tierOverrides = { ...planOverrides?.[monthKey]?.[tier] };
+      if (!raw || parseFloat(raw) === 0) {
+        delete tierOverrides[key];
+      } else {
+        tierOverrides[key] = raw;
+      }
       const next = {
         ...planOverrides,
-        [monthKey]: {
-          ...planOverrides?.[monthKey],
-          [tier]: { ...planOverrides?.[monthKey]?.[tier], [key]: raw },
-        },
+        [monthKey]: { ...planOverrides?.[monthKey], [tier]: tierOverrides },
       };
       onUpdatePlanOverride(next);
     } else {
