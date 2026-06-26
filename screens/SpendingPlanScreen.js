@@ -321,7 +321,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const overrideVal = planOverrides?.[monthKey]?.[tier]?.[subPlanKey];
               const hasValidOverride = overrideVal !== undefined && overrideVal !== '';
               const basePlan = parseFloat(basePlanForMonth(tier, subPlanKey, monthKey) || '0') || 0;
-              const displayBudget = hasValidOverride ? (parseFloat(overrideVal) || 0) : basePlan > 0 ? basePlan : activeBillsTotal > 0 ? activeBillsTotal : 0;
+              const displayBudget = hasValidOverride ? (parseFloat(overrideVal) || 0) : Math.max(basePlan, activeBillsTotal);
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && Math.round(actual) > Math.round(displayBudget);
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && displayBudget > 0 && Math.round(actual) >= Math.round(displayBudget);
               const isOverridden = hasOverride(tier, subPlanKey);
@@ -381,7 +381,11 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const subPlanKey = planKey(cat.name, sub);
               const val = effectiveBudget(tier, subPlanKey) || '';
               const actual = showActuals ? (monthlyActual[subPlanKey] || 0) : 0;
-              const budget = parseFloat(val) || 0;
+              const rawBudget = parseFloat(val) || 0;
+              const expandedActiveBillsTotal = isRealistic
+                ? bills.filter(b => b.category === cat.name && b.subcategory === sub && !b.skippedMonths?.includes(monthKey)).reduce((s, b) => s + b.amount, 0)
+                : 0;
+              const budget = Math.max(rawBudget, expandedActiveBillsTotal);
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && Math.round(actual) > Math.round(budget);
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && budget > 0 && Math.round(actual) >= Math.round(budget);
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);
@@ -403,33 +407,33 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                     onPress={() => openCell(tier, cat.name, sub)}
                     activeOpacity={0.7}
                   >
-                    {hasBill && <Text style={{ fontSize: 12, color: val ? palette.text : colors.bill }}>↻</Text>}
+                    {hasBill && <Text style={{ fontSize: 12, color: budget > 0 ? palette.text : colors.bill }}>↻</Text>}
                     {isIncome ? (
                       <>
                         {showActuals && actual !== 0 && (
                           <Text style={[styles.subAmount, { color: actualColor }]}>${fmt(actual)}</Text>
                         )}
-                        {showActuals && actual !== 0 && val && (
+                        {showActuals && actual !== 0 && budget > 0 && (
                           <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
                         )}
-                        <Text style={[styles.subAmount, { color: val ? (showActuals && actual !== 0 ? colors.textLight : palette.text) : colors.textLight }]}>
-                          {val ? `$${fmt(parseFloat(val))}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
+                        <Text style={[styles.subAmount, { color: budget > 0 ? (showActuals && actual !== 0 ? colors.textLight : palette.text) : colors.textLight }]}>
+                          {budget > 0 ? `$${fmt(budget)}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
                         </Text>
                       </>
                     ) : (
                       <>
                         {showActuals && actual !== 0 && (
                           <Text style={[styles.subAmount, { color: actualColor, fontWeight: overBudget ? '700' : 'normal' }]}>
-                            {val
+                            {budget > 0
                               ? showAvailable ? fmtAmt(budget - actual) : `$${fmt(actual)}`
                               : showAvailable ? fmtAmt(-actual) : `$${fmt(actual)}`}
                           </Text>
                         )}
-                        {showActuals && actual !== 0 && val ? (
+                        {showActuals && actual !== 0 && budget > 0 ? (
                           <Text style={{ fontSize: 11, color: colors.textLight }}>/</Text>
                         ) : null}
-                        <Text style={[styles.subAmount, { color: val ? (showActuals && actual !== 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
-                          {val ? `$${fmt(parseFloat(val))}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
+                        <Text style={[styles.subAmount, { color: budget > 0 ? (showActuals && actual !== 0 ? colors.textLight : isOverridden ? colors.bill : palette.text) : colors.textLight }]}>
+                          {budget > 0 ? `$${fmt(budget)}` : showActuals && actual !== 0 ? '' : 'tap to enter'}
                         </Text>
                       </>
                     )}

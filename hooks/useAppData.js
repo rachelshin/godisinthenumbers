@@ -372,10 +372,13 @@ export function useAppData() {
     if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { bills: nextBills }).catch(console.warn);
 
     if (bill.subcategory) {
-      const pk      = `${bill.category} > ${bill.subcategory}`;
-      const existing = planRef.current.Realistic?.[pk];
-      if (!(existing && parseFloat(existing) > 0)) {
-        const nextPlan = { ...planRef.current, Realistic: { ...planRef.current.Realistic, [pk]: bill.amount.toString() } };
+      const pk = `${bill.category} > ${bill.subcategory}`;
+      const newBillsTotal = nextBills
+        .filter(b => b.category === bill.category && b.subcategory === bill.subcategory)
+        .reduce((s, b) => s + b.amount, 0);
+      const existing = parseFloat(planRef.current.Realistic?.[pk]) || 0;
+      if (newBillsTotal > existing) {
+        const nextPlan = { ...planRef.current, Realistic: { ...planRef.current.Realistic, [pk]: newBillsTotal.toString() } };
         planRef.current = nextPlan;
         setPlan(nextPlan);
         saveItem(keys.plan, nextPlan);

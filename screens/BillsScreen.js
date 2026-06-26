@@ -114,7 +114,7 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
         {bills.length === 0 ? (
           <Text style={s.empty}>No recurring bills yet.{'\n'}Tap + Add to get started.</Text>
-        ) : bills.map(bill => {
+        ) : [...bills].sort((a, b) => a.dayOfMonth - b.dayOfMonth).map(bill => {
           const isSkipped = bill.skippedMonths?.includes(monthKey);
           return (
             <View key={bill.id} style={s.billRow}>
