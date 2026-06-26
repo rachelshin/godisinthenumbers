@@ -120,7 +120,10 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const subTotal = (tier, cat) =>
     cat.subcategories.reduce((sum, sub) => {
       const v = parseFloat(effectiveBudget(tier, planKey(cat.name, sub)) || '0');
-      return sum + (isNaN(v) ? 0 : v);
+      const billsFloor = tier === MAIN_TIER
+        ? bills.filter(b => b.category === cat.name && b.subcategory === sub && !b.skippedMonths?.includes(monthKey)).reduce((s, b) => s + b.amount, 0)
+        : 0;
+      return sum + Math.max(isNaN(v) ? 0 : v, billsFloor);
     }, 0);
 
   const catBudgetFor = (tier, cat) => {
