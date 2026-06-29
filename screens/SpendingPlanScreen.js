@@ -591,7 +591,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   if (savingsGoalsVisible) {
     return (
       <SavingsGoalsScreen
-        categories={categories}
+        categories={catsForTier(MAIN_TIER)}
         purchases={purchases}
         savingsGoals={savingsGoals}
         onUpdateSavingsGoals={onUpdateSavingsGoals}
