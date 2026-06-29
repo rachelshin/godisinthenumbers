@@ -1,5 +1,5 @@
 // screens/SpendingPlanScreen.js
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Alert,
   Modal, TextInput, KeyboardAvoidingView, Platform, Switch,
@@ -30,6 +30,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const [editingCell, setEditingCell] = useState(null);
   const [cellValue, setCellValue] = useState('');
   const [thisMonthOnly, setThisMonthOnly] = useState(false);
+  const thisMonthOnlyRef = useRef(false);
   const [viewingEntriesFor, setViewingEntriesFor] = useState(null);
   const [showAvailable, setShowAvailable] = useState(true);
   const [manageModal, setManageModal] = useState(false);
@@ -143,6 +144,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     const ov = tier === MAIN_TIER ? planOverrides?.[monthKey]?.[tier]?.[key] : undefined;
     const hasValidOv = ov !== undefined && ov !== '';
     setEditingCell({ tier, catName, sub });
+    thisMonthOnlyRef.current = hasValidOv;
     setThisMonthOnly(hasValidOv);
     setCellValue(hasValidOv ? ov : tier === MAIN_TIER ? (basePlanForMonth(tier, key, monthKey) || '') : (plan[tier]?.[key] || ''));
   };
@@ -151,11 +153,13 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
     const ov = tier === MAIN_TIER ? planOverrides?.[monthKey]?.[tier]?.[catName] : undefined;
     const hasValidOv = ov !== undefined && ov !== '';
     setEditingCell({ tier, catName, sub: null });
+    thisMonthOnlyRef.current = hasValidOv;
     setThisMonthOnly(hasValidOv);
     setCellValue(hasValidOv ? ov : tier === MAIN_TIER ? (basePlanForMonth(tier, catName, monthKey) || '') : (plan[tier]?.[catName] || ''));
   };
 
   const handleToggleMonthOnly = (val, cell) => {
+    thisMonthOnlyRef.current = val;
     setThisMonthOnly(val);
     const { tier, catName, sub } = cell;
     const key = sub === null ? catName : planKey(catName, sub);
@@ -187,7 +191,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       }
     }
 
-    if (thisMonthOnly) {
+    if (thisMonthOnlyRef.current) {
       // Override mode: '' = delete override, '0' = valid $0 override
       const tierOverrides = { ...planOverrides?.[monthKey]?.[tier] };
       if (raw === '') {
@@ -232,6 +236,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       }
     }
     setEditingCell(null);
+    thisMonthOnlyRef.current = false;
     setThisMonthOnly(false);
   };
 
@@ -502,14 +507,14 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
                   Recurring bill —{' '}
                   <Text
                     style={{ color: colors.bill, textDecorationLine: 'underline' }}
-                    onPress={() => { setEditingCell(null); setThisMonthOnly(false); setBillsVisible(true); }}
+                    onPress={() => { setEditingCell(null); thisMonthOnlyRef.current = false; setThisMonthOnly(false); setBillsVisible(true); }}
                   >
                     edit in Bills screen
                   </Text>
                 </Text>
               )}
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => { setEditingCell(null); setThisMonthOnly(false); }}>
+                <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={() => { setEditingCell(null); thisMonthOnlyRef.current = false; setThisMonthOnly(false); }}>
                   <Text style={{ color: colors.textMid, fontWeight: '500' }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[layout.modalBtn, { backgroundColor: thisMonthOnly && editingCell.tier === MAIN_TIER ? colors.bill : tintColor, flex: 2 }]} onPress={commitCell}>
