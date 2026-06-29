@@ -94,10 +94,11 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
     p => new Date(p.date).toDateString() === new Date().toDateString()
   );
   const todayTotal = todayPurchases.filter(p => !p.income).reduce((s, p) => s + p.amount, 0);
+  const todayNonSavingsTotal = todayPurchases.filter(p => !p.income && p.category !== 'Savings').reduce((s, p) => s + p.amount, 0);
 
   const availableAmount = (() => {
     const base = computeAvailable(bankBalance.amount, bankBalance.paycheckDate);
-    return base != null ? base - todayTotal : base;
+    return base != null ? base - todayNonSavingsTotal : base;
   })();
 
   const todayStr = toDateStr(new Date());
