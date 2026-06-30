@@ -322,7 +322,8 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
         visible={manageVisible}
         categories={effectiveCategories}
         onSave={(cats) => {
-          onUpdateCategoryVersions({ ...categoryVersions, [todayMonthKey]: cats });
+          const pruned = Object.fromEntries(Object.entries(categoryVersions).filter(([k]) => k <= todayMonthKey));
+          onUpdateCategoryVersions({ ...pruned, [todayMonthKey]: cats });
           setManageVisible(false);
         }}
         onClose={() => setManageVisible(false)}

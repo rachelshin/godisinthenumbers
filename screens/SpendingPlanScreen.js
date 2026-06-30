@@ -707,7 +707,8 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         visible={manageModal}
         categories={catsForTier(MAIN_TIER)}
         onSave={(cats) => {
-          onUpdateCategoryVersions({ ...categoryVersions, [monthKey]: cats });
+          const pruned = Object.fromEntries(Object.entries(categoryVersions).filter(([k]) => k <= monthKey));
+          onUpdateCategoryVersions({ ...pruned, [monthKey]: cats });
           setManageModal(false);
         }}
         onClose={() => setManageModal(false)}
