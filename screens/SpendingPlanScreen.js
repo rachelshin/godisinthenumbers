@@ -580,7 +580,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   if (billsVisible) {
     return (
       <BillsScreen
-        categories={categories}
+        categories={catsForTier(MAIN_TIER)}
         bills={bills}
         onAdd={onAddBill}
         onUpdate={onUpdateBill}
