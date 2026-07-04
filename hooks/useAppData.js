@@ -1,6 +1,5 @@
 // hooks/useAppData.js
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { unstable_batchedUpdates } from 'react-native';
 import { DEFAULT_CATEGORIES, DEFAULT_BDA_CATEGORIES, STORAGE_KEYS, BDA_STORAGE_KEYS } from '../data/constants';
 import { auth } from '../data/firebase';
 import { onAuthStateChanged, getRedirectResult, signOut } from 'firebase/auth';
@@ -151,21 +150,19 @@ export function useAppData() {
     planVersionsRef.current     = pv;
     categoryVersionsRef.current = cvs;
     billsRef.current            = bls;
-    unstable_batchedUpdates(() => {
-      setMode(savedMode);
-      setCategories(cats);
-      setIdealCategories(idealCats);
-      setMiniCategories(miniCats);
-      setPlan(pl);
-      setPlanOverrides(po);
-      setPlanVersions(pv);
-      setCategoryVersions(cvs);
-      setPurchases(purch);
-      setBankBalance(bal);
-      setBills(bls);
-      setSavingsGoals(sg);
-      setSobriety(sober);
-    });
+    setMode(savedMode);
+    setCategories(cats);
+    setIdealCategories(idealCats);
+    setMiniCategories(miniCats);
+    setPlan(pl);
+    setPlanOverrides(po);
+    setPlanVersions(pv);
+    setCategoryVersions(cvs);
+    setPurchases(purch);
+    setBankBalance(bal);
+    setBills(bls);
+    setSavingsGoals(sg);
+    setSobriety(sober);
   }, []);
 
   // ── Auth listener ────────────────────────────────────────────
@@ -275,23 +272,21 @@ export function useAppData() {
     planVersionsRef.current     = pv || {};
     categoryVersionsRef.current = cvs || {};
     billsRef.current            = bls;
-    unstable_batchedUpdates(() => {
-      setCategories(cats);
-      setIdealCategories(idealCats);
-      setMiniCategories(miniCats);
-      setCategoryVersions(cvs || {});
-      setPlan(pl);
-      setPlanOverrides(po || {});
-      setPlanVersions(pv || {});
-      setPurchases(purch);
-      setBankBalance(bal);
-      setBills(bls);
-      setSavingsGoals(sg);
-      setMode(newMode);
-      setModeSwitching(false);
-    });
+    setCategories(cats);
+    setIdealCategories(idealCats);
+    setMiniCategories(miniCats);
+    setCategoryVersions(cvs || {});
+    setPlan(pl);
+    setPlanOverrides(po || {});
+    setPlanVersions(pv || {});
+    setPurchases(purch);
+    setBankBalance(bal);
+    setBills(bls);
+    setSavingsGoals(sg);
+    setMode(newMode);
     saveItem('numbers_mode', newMode);
     if (userRef.current) fsSaveMode(userRef.current.uid, newMode).catch(console.warn);
+    setModeSwitching(false);
   }, []);
 
   // ── Callbacks — ref pattern keeps side effects out of updaters ──
