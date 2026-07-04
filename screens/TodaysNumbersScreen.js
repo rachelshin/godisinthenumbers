@@ -1,8 +1,8 @@
 // screens/TodaysNumbersScreen.js
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  Alert, Modal, KeyboardAvoidingView, Platform,
+  Alert, Modal, KeyboardAvoidingView, Platform, Animated,
 } from 'react-native';
 import { colors } from '../styles/shared';
 import layout from '../styles/layout';
@@ -47,6 +47,21 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
   const dateString = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
   });
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (modeSwitching) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.25, duration: 450, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 450, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [modeSwitching]);
 
   const [addVisible, setAddVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -130,11 +145,12 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
           <TouchableOpacity
             onPress={() => !modeSwitching && onSwitchMode(isBusiness ? 'personal' : 'business')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ flexDirection: 'row', alignItems: 'center', opacity: modeSwitching ? 0.4 : 1 }}
           >
-            <Text style={{ fontSize: 11, color: isBusiness ? colors.textLight : colors.textDark, fontStyle: 'italic', letterSpacing: 0.3 }}>Personal</Text>
-            <Text style={{ fontSize: 11, color: colors.textLight, fontStyle: 'italic' }}>  ·  </Text>
-            <Text style={{ fontSize: 11, color: isBusiness ? colors.textDark : colors.textLight, fontStyle: 'italic', letterSpacing: 0.3 }}>BDA</Text>
+            <Animated.View style={{ flexDirection: 'row', alignItems: 'center', opacity: pulseAnim }}>
+              <Text style={{ fontSize: 11, color: isBusiness ? colors.textLight : colors.textDark, fontStyle: 'italic', letterSpacing: 0.3 }}>Personal</Text>
+              <Text style={{ fontSize: 11, color: colors.textLight, fontStyle: 'italic' }}>  ·  </Text>
+              <Text style={{ fontSize: 11, color: isBusiness ? colors.textDark : colors.textLight, fontStyle: 'italic', letterSpacing: 0.3 }}>BDA</Text>
+            </Animated.View>
           </TouchableOpacity>
         </View>
         <Text style={styles.eyebrowTagline}>
