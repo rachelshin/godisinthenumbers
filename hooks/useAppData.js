@@ -166,6 +166,41 @@ export function useAppData() {
     setSobriety(sober);
   }, []);
 
+  // ── Background preload of the non-active mode ────────────────
+  const preloadOtherMode = useCallback(async (currentMode) => {
+    if (!userRef.current) return;
+    const otherMode = currentMode === 'personal' ? 'business' : 'personal';
+    const defaultCats = otherMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
+    try {
+      const [meta, fetchedPurch] = await Promise.all([
+        fsLoadMeta(userRef.current.uid, otherMode),
+        fsLoadPurchases(userRef.current.uid, otherMode),
+      ]);
+      let cats      = meta?.categories      || defaultCats;
+      let idealCats = meta?.idealCategories || defaultCats;
+      let miniCats  = meta?.miniCategories  || defaultCats;
+      if (otherMode === 'personal') {
+        cats      = ensureSavingsCategory(cats);
+        idealCats = ensureSavingsCategory(idealCats);
+        miniCats  = ensureSavingsCategory(miniCats);
+      }
+      otherModeCache.current = {
+        mode: otherMode,
+        cats, idealCats, miniCats,
+        pl:    meta?.plan             || { Ideal: {}, Realistic: {}, Mini: {} },
+        po:    meta?.planOverrides    || {},
+        pv:    meta?.planVersions     || {},
+        cvs:   meta?.categoryVersions || {},
+        bls:   meta?.bills            || [],
+        bal:   meta?.bankBalance      || { amount: null, updatedAt: null },
+        sg:    meta?.savingsGoals     || {},
+        purch: fetchedPurch,
+      };
+    } catch {
+      // silent — switchMode falls back to a fresh fetch if cache is empty
+    }
+  }, []);
+
   // ── Auth listener ────────────────────────────────────────────
   useEffect(() => {
     getRedirectResult(auth).catch(console.warn);
@@ -214,41 +249,6 @@ export function useAppData() {
     userRef.current = null;
     otherModeCache.current = null;
     await signOut(auth);
-  }, []);
-
-  // ── Background preload of the non-active mode ────────────────
-  const preloadOtherMode = useCallback(async (currentMode) => {
-    if (!userRef.current) return;
-    const otherMode = currentMode === 'personal' ? 'business' : 'personal';
-    const defaultCats = otherMode === 'business' ? DEFAULT_BDA_CATEGORIES : DEFAULT_CATEGORIES;
-    try {
-      const [meta, fetchedPurch] = await Promise.all([
-        fsLoadMeta(userRef.current.uid, otherMode),
-        fsLoadPurchases(userRef.current.uid, otherMode),
-      ]);
-      let cats      = meta?.categories      || defaultCats;
-      let idealCats = meta?.idealCategories || defaultCats;
-      let miniCats  = meta?.miniCategories  || defaultCats;
-      if (otherMode === 'personal') {
-        cats      = ensureSavingsCategory(cats);
-        idealCats = ensureSavingsCategory(idealCats);
-        miniCats  = ensureSavingsCategory(miniCats);
-      }
-      otherModeCache.current = {
-        mode: otherMode,
-        cats, idealCats, miniCats,
-        pl:    meta?.plan             || { Ideal: {}, Realistic: {}, Mini: {} },
-        po:    meta?.planOverrides    || {},
-        pv:    meta?.planVersions     || {},
-        cvs:   meta?.categoryVersions || {},
-        bls:   meta?.bills            || [],
-        bal:   meta?.bankBalance      || { amount: null, updatedAt: null },
-        sg:    meta?.savingsGoals     || {},
-        purch: fetchedPurch,
-      };
-    } catch {
-      // silent — switchMode falls back to a fresh fetch if cache is empty
-    }
   }, []);
 
   // ── Mode switch ──────────────────────────────────────────────
