@@ -181,7 +181,7 @@ export default function ManageCategoriesModal({ visible, categories, onSave, onC
                         style={styles.addSubInput}
                         value={newSubName}
                         onChangeText={setNewSubName}
-                        placeholder="Add subcategory…"
+                        placeholder=""
                         placeholderTextColor={colors.textLight}
                         returnKeyType="done"
                         onSubmitEditing={() => addSubcategory(cat.id)}
@@ -201,7 +201,7 @@ export default function ManageCategoriesModal({ visible, categories, onSave, onC
                 style={styles.addSubInput}
                 value={newCatName}
                 onChangeText={setNewCatName}
-                placeholder="New category…"
+                placeholder=""
                 placeholderTextColor={colors.textLight}
                 returnKeyType="done"
                 onSubmitEditing={addCategory}

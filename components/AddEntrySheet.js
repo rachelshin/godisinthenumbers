@@ -168,7 +168,7 @@ export default function AddEntrySheet({ visible, date, categories, activeCategor
                   style={[layout.textBox, { minHeight: 60 }]}
                   value={note}
                   onChangeText={setNote}
-                  placeholder="What was this for?"
+                  placeholder=""
                   placeholderTextColor={colors.textLight}
                   multiline
                 />

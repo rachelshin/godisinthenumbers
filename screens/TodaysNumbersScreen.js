@@ -275,7 +275,6 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
               keyboardType="decimal-pad"
               placeholder=""
               placeholderTextColor={colors.textLight}
-              autoFocus
               textAlign="center"
             />
             <Text style={[styles.balanceStaleBadge, { textAlign: 'center', marginBottom: 8, marginTop: 16 }]}>

@@ -154,9 +154,8 @@ export default function SavingsGoalsScreen({ categories, purchases, savingsGoals
               value={savedValue}
               onChangeText={setSavedValue}
               keyboardType="decimal-pad"
-              placeholder="0"
+              placeholder=""
               placeholderTextColor={colors.textLight}
-              autoFocus
               returnKeyType="next"
               onSubmitEditing={() => goalInputRef.current?.focus()}
             />
@@ -175,7 +174,7 @@ export default function SavingsGoalsScreen({ categories, purchases, savingsGoals
               value={goalValue}
               onChangeText={setGoalValue}
               keyboardType="decimal-pad"
-              placeholder="0"
+              placeholder=""
               placeholderTextColor={colors.textLight}
               returnKeyType="done"
               onSubmitEditing={commitEdit}

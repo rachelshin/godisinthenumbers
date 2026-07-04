@@ -154,7 +154,7 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
                   style={s.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="e.g. Rent, Netflix, Internet"
+                  placeholder=""
                   placeholderTextColor={colors.textLight}
                 />
 

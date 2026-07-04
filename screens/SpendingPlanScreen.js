@@ -99,22 +99,6 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
   const actualCatTotal = (cat) =>
     cat.subcategories.reduce((sum, sub) => sum + (monthlyActual[planKey(cat.name, sub)] || 0), 0);
 
-  useEffect(() => {
-    console.log('=== SPENDING DEBUG', `${viewYear}-${viewMonth + 1} ===`);
-    categories.forEach(cat => {
-      const subBreakdown = cat.subcategories
-        .map(sub => ({ sub, val: monthlyActual[planKey(cat.name, sub)] || 0 }))
-        .filter(x => x.val !== 0);
-      if (subBreakdown.length > 0) {
-        const catTotal = subBreakdown.reduce((s, x) => s + x.val, 0);
-        console.log(`[${cat.name}] derived total: $${catTotal.toFixed(2)}`, subBreakdown.map(x => `${x.sub}: $${x.val.toFixed(2)}`));
-      }
-    });
-    const knownKeys = new Set(categories.flatMap(cat => cat.subcategories.map(sub => planKey(cat.name, sub))));
-    const orphaned = Object.entries(monthlyActual).filter(([k]) => !knownKeys.has(k));
-    if (orphaned.length) console.warn('[orphaned purchase keys — category or subcategory mismatch]', orphaned);
-    else console.log('[no orphaned keys]');
-  }, [monthlyActual, categories]); // eslint-disable-line
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const fmtAmt = (n) => { const abs = fmt(Math.abs(n)); return (n < 0 && abs !== '0') ? `-$${abs}` : `$${abs}`; };
 

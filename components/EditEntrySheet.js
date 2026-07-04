@@ -143,7 +143,7 @@ export default function EditEntrySheet({ item, categories, activeCategoryColors,
               style={[layout.textBox, { minHeight: 60 }]}
               value={editNote}
               onChangeText={setEditNote}
-              placeholder="What was this for?"
+              placeholder=""
               placeholderTextColor={colors.textLight}
               multiline
             />
