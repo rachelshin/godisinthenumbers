@@ -113,7 +113,7 @@ function RecordsView({ purchases, categories, onMonthView, mode, bills = [], onU
 
   const daysInMonth = getDaysInMonth(year, month);
 
-  const { billsByDay, enteredBillIds, dailyPendingBillTotal } = useMemo(() => {
+  const { billsByDay, enteredBillIds, dailyPendingBillTotal, monthBillsTotal } = useMemo(() => {
     const byDay = {};
     const mk = `${year}-${String(month + 1).padStart(2, '0')}`;
     bills.forEach(bill => {
@@ -133,7 +133,8 @@ function RecordsView({ purchases, categories, onMonthView, mode, bills = [], onU
       const total = bs.filter(b => !entered.has(b.id)).reduce((s, b) => s + b.amount, 0);
       if (total > 0) pendingTotals[+d] = total;
     });
-    return { billsByDay: byDay, enteredBillIds: entered, dailyPendingBillTotal: pendingTotals };
+    const billsTotal = Object.values(byDay).flat().reduce((s, b) => s + b.amount, 0);
+    return { billsByDay: byDay, enteredBillIds: entered, dailyPendingBillTotal: pendingTotals, monthBillsTotal: billsTotal };
   }, [bills, purchases, month, year, daysInMonth]);
 
   const dayBills = useMemo(() =>
@@ -200,6 +201,11 @@ function RecordsView({ purchases, categories, onMonthView, mode, bills = [], onU
             <Text style={styles.monthTotalLabel}>Net</Text>
           </View>
         </View>
+        {monthBillsTotal > 0 && (
+          <Text style={{ fontSize: 11, color: colors.bill, textAlign: 'center', marginTop: 4 }}>
+            ↻ ${monthBillsTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} in recurring bills
+          </Text>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
