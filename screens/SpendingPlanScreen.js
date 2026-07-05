@@ -107,6 +107,8 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
       const raw = parseFloat(effectiveBudget(tier, planKey(cat.name, sub)) || '0');
       const v = isNaN(raw) ? 0 : raw;
       if (tier !== MAIN_TIER) return sum + v;
+      // A this-month override is authoritative — a $0 override acts like skipping the bills
+      if (hasOverride(tier, planKey(cat.name, sub))) return sum + v;
       const subBills = bills.filter(b => b.category === cat.name && b.subcategory === sub);
       const activeBillsTotal = subBills.filter(b => !b.skippedMonths?.includes(monthKey)).reduce((s, b) => s + b.amount, 0);
       const skippedBillsTotal = subBills.reduce((s, b) => s + b.amount, 0) - activeBillsTotal;
@@ -187,6 +189,12 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         ...planOverrides,
         [monthKey]: { ...planOverrides?.[monthKey], [tier]: tierOverrides },
       });
+      // A $0 override means "spend nothing here this month" — skip the sub's recurring bills too
+      if (sub !== null && tier === MAIN_TIER && raw !== '' && parseFloat(raw) === 0) {
+        bills
+          .filter(b => b.category === catName && b.subcategory === sub && !b.skippedMonths?.includes(monthKey))
+          .forEach(b => onUpdateBill({ ...b, skippedMonths: [...(b.skippedMonths || []), monthKey] }));
+      }
     } else {
       if (sub === null) {
         const entered = parseFloat(raw) || 0;
@@ -251,7 +259,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
         const filledSubs = cat.subcategories.filter(sub => {
           const v = parseFloat(effectiveBudget(tier, planKey(cat.name, sub)) || '0');
           const a = showActuals ? (monthlyActual[planKey(cat.name, sub)] || 0) : 0;
-          return v > 0 || a !== 0;
+          return v > 0 || a !== 0 || hasOverride(tier, planKey(cat.name, sub));
         });
         const catBudget = catBudgetFor(tier, cat);
         const catTotal = catBudget ?? subTotal(tier, cat);
@@ -380,7 +388,7 @@ export default function SpendingPlanScreen({ mode, categories, idealCategories, 
               const expandedMatchingBills = isRealistic ? bills.filter(b => b.category === cat.name && b.subcategory === sub) : [];
               const expandedActiveBillsTotal = expandedMatchingBills.filter(b => !b.skippedMonths?.includes(monthKey)).reduce((s, b) => s + b.amount, 0);
               const expandedSkippedBillsTotal = expandedMatchingBills.reduce((s, b) => s + b.amount, 0) - expandedActiveBillsTotal;
-              const budget = Math.max(expandedActiveBillsTotal, rawBudget - expandedSkippedBillsTotal);
+              const budget = hasOverride(tier, subPlanKey) ? rawBudget : Math.max(expandedActiveBillsTotal, rawBudget - expandedSkippedBillsTotal);
               const overBudget = showActuals && !isIncomeCat(cat.name) && actual > 0 && budget > 0 && Math.round(actual) > Math.round(budget);
               const fullyUsed = showActuals && !isIncomeCat(cat.name) && !overBudget && actual > 0 && budget > 0 && Math.round(actual) >= Math.round(budget);
               const hasBill = isRealistic && bills.some(b => b.category === cat.name && b.subcategory === sub);

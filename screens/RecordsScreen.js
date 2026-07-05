@@ -115,7 +115,9 @@ function RecordsView({ purchases, categories, onMonthView, mode, bills = [], onU
 
   const { billsByDay, enteredBillIds, dailyPendingBillTotal } = useMemo(() => {
     const byDay = {};
+    const mk = `${year}-${String(month + 1).padStart(2, '0')}`;
     bills.forEach(bill => {
+      if (bill.skippedMonths?.includes(mk)) return;
       if (bill.dayOfMonth <= daysInMonth) {
         if (!byDay[bill.dayOfMonth]) byDay[bill.dayOfMonth] = [];
         byDay[bill.dayOfMonth].push(bill);
