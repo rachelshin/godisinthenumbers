@@ -109,7 +109,7 @@ export default function TodaysNumbersScreen({ mode, onSwitchMode, modeSwitching 
     p => new Date(p.date).toDateString() === new Date().toDateString()
   );
   const todayTotal = todayPurchases.filter(p => !p.income).reduce((s, p) => s + p.amount, 0);
-  const todayNonSavingsTotal = todayPurchases.filter(p => !p.income && p.category !== 'Savings').reduce((s, p) => s + p.amount, 0);
+  const todayNonSavingsTotal = todayPurchases.filter(p => !p.income && p.category !== 'Savings' && !(isBusiness && p.category === "Owner's Draw")).reduce((s, p) => s + p.amount, 0);
 
   const availableAmount = (() => {
     const base = computeAvailable(bankBalance.amount, bankBalance.paycheckDate);
