@@ -37,6 +37,7 @@ export function useAppData() {
   const [loaded, setLoaded]                     = useState(false);
   const [user, setUser]                         = useState(null);
   const [authReady, setAuthReady]               = useState(false);
+  const [syncReady, setSyncReady]               = useState(false);
   const [modeSwitching, setModeSwitching]       = useState(false);
 
   const userRef      = useRef(null);
@@ -241,6 +242,7 @@ export function useAppData() {
         setBills([]);
         setSobriety({ history: {} });
       }
+      setSyncReady(true);
     });
     return unsub;
   }, [loadFromFirestore, preloadOtherMode]);
@@ -406,9 +408,14 @@ export function useAppData() {
     if (userRef.current) fsSetPurchase(userRef.current.uid, modeRef.current, updated).catch(console.warn);
   }, []);
 
-  const addBill = useCallback((bill) => {
+  const addBill = useCallback((rawBill) => {
     const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
 
+    const bill = {
+      ...rawBill,
+      autoPay: rawBill.autoPay !== false,
+      autoPayFrom: rawBill.autoPayFrom || new Date().toLocaleDateString('en-CA'),
+    };
     const nextBills = [...billsRef.current, bill];
     billsRef.current = nextBills;
     setBills(nextBills);
@@ -430,30 +437,15 @@ export function useAppData() {
       }
     }
 
-    const today = new Date();
-    if (bill.dayOfMonth === today.getDate()) {
-      const entry = {
-        id: `bill-${bill.id}-${today.getFullYear()}-${today.getMonth()}`,
-        date: today.toISOString(),
-        amount: bill.amount,
-        category: bill.category,
-        subcategory: bill.subcategory || '',
-        note: '↻ recurring',
-        income: false,
-        billId: bill.id,
-      };
-      if (!purchasesRef.current.some(p => p.id === entry.id)) {
-        const nextPurch = [entry, ...purchasesRef.current];
-        purchasesRef.current = nextPurch;
-        setPurchases(nextPurch);
-        saveItem(keys.purchases, nextPurch);
-        if (userRef.current) fsSetPurchase(userRef.current.uid, modeRef.current, entry).catch(console.warn);
-      }
-    }
   }, []);
 
-  const updateBill = useCallback((updated) => {
+  const updateBill = useCallback((raw) => {
     const keys     = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
+    const prevBill = billsRef.current.find(b => b.id === raw.id);
+    // re-anchor auto-pay when it's switched back on, so passed due dates aren't backfilled
+    const updated  = raw.autoPay && prevBill?.autoPay === false
+      ? { ...raw, autoPayFrom: new Date().toLocaleDateString('en-CA') }
+      : raw;
     const nextBills = billsRef.current.map(b => b.id === updated.id ? updated : b);
     billsRef.current = nextBills;
     setBills(nextBills);
@@ -491,6 +483,67 @@ export function useAppData() {
       }
     }
   }, []);
+
+  // ── Auto-pay: create spending entries when bills come due ────
+  useEffect(() => {
+    if (!loaded || !syncReady) return;
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA');
+    const pad = n => String(n).padStart(2, '0');
+    const months = [-1, 0].map(off => {
+      const d = new Date(now.getFullYear(), now.getMonth() + off, 1);
+      return { y: d.getFullYear(), m: d.getMonth(), mk: `${d.getFullYear()}-${pad(d.getMonth() + 1)}` };
+    });
+
+    let changed = false;
+    const newEntries = [];
+    const nextBills = billsRef.current.map(bill => {
+      let b = bill;
+      if (b.autoPay === undefined) {
+        // pre-existing bill from before the auto-pay feature: default to on, starting today
+        b = { ...b, autoPay: true, autoPayFrom: b.autoPayFrom || todayStr };
+        changed = true;
+      }
+      if (!b.autoPay || !b.dayOfMonth || !b.amount) return b;
+      months.forEach(({ y, m, mk }) => {
+        const dueStr = `${y}-${pad(m + 1)}-${pad(b.dayOfMonth)}`;
+        if (dueStr > todayStr) return;
+        if (b.autoPayFrom && dueStr < b.autoPayFrom) return;
+        if (b.skippedMonths?.includes(mk)) return;
+        if (b.autoPaidMonths?.includes(mk)) return;
+        b = { ...b, autoPaidMonths: [...(b.autoPaidMonths || []), mk] };
+        changed = true;
+        const id = `bill-${b.id}-${y}-${m}`;
+        if (!purchasesRef.current.some(p => p.id === id)) {
+          newEntries.push({
+            id,
+            date: new Date(y, m, b.dayOfMonth, 12).toISOString(),
+            amount: b.amount,
+            category: b.category,
+            subcategory: b.subcategory || '',
+            note: '↻ recurring',
+            income: false,
+            billId: b.id,
+          });
+        }
+      });
+      return b;
+    });
+
+    if (!changed) return;
+    const keys = modeRef.current === 'business' ? BDA_STORAGE_KEYS : STORAGE_KEYS;
+    billsRef.current = nextBills;
+    setBills(nextBills);
+    saveItem(keys.bills, nextBills);
+    if (userRef.current) fsSaveMeta(userRef.current.uid, modeRef.current, { bills: nextBills }).catch(console.warn);
+    if (newEntries.length) {
+      const nextPurch = [...newEntries, ...purchasesRef.current];
+      purchasesRef.current = nextPurch;
+      setPurchases(nextPurch);
+      saveItem(keys.purchases, nextPurch);
+      if (userRef.current) newEntries.forEach(e => fsSetPurchase(userRef.current.uid, modeRef.current, e).catch(console.warn));
+    }
+  }, [loaded, syncReady, bills, purchases, mode]);
 
   const updateSobriety = useCallback((s) => {
     setSobriety(s);

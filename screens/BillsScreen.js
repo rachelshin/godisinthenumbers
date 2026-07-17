@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   Modal, TextInput, Alert, KeyboardAvoidingView,
-  Platform, StyleSheet,
+  Platform, StyleSheet, Switch,
 } from 'react-native';
 import { colors, type } from '../styles/shared';
 import layout from '../styles/layout';
@@ -30,6 +30,7 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
   const [subcategory, setSubcategory]           = useState('');
   const [amount, setAmount]                     = useState('');
   const [dayOfMonth, setDayOfMonth]             = useState(1);
+  const [autoPay, setAutoPay]                   = useState(true);
   const [pickingCategory, setPickingCategory]   = useState(false);
   const [pickingSubcategory, setPickingSubcategory] = useState(false);
   const [pickingDay, setPickingDay]             = useState(false);
@@ -43,7 +44,7 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
 
   const openAdd = () => {
     setEditingBill(null);
-    setName(''); setCategory(''); setSubcategory(''); setAmount(''); setDayOfMonth(1);
+    setName(''); setCategory(''); setSubcategory(''); setAmount(''); setDayOfMonth(1); setAutoPay(true);
     setFormVisible(true);
   };
 
@@ -54,6 +55,7 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
     setSubcategory(bill.subcategory || '');
     setAmount(bill.amount.toString());
     setDayOfMonth(bill.dayOfMonth);
+    setAutoPay(bill.autoPay !== false);
     setFormVisible(true);
   };
 
@@ -67,12 +69,14 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
     if (!subcategory) return Alert.alert('', 'Please choose a subcategory.');
     if (isNaN(amt) || amt <= 0) return Alert.alert('', 'Please enter an amount.');
     const bill = {
+      ...(editingBill || {}),
       id: editingBill?.id ?? Date.now().toString(),
       name: trimName,
       category,
       subcategory,
       amount: amt,
       dayOfMonth,
+      autoPay,
     };
     editingBill ? onUpdate(bill) : onAdd(bill);
     closeForm();
@@ -121,7 +125,7 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
               <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={() => openEdit(bill)} activeOpacity={0.7}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.billName, isSkipped && { color: colors.textLight }]}>{bill.name}</Text>
-                  <Text style={s.billMeta}>{bill.subcategory || bill.category} · due {ordinal(bill.dayOfMonth)}</Text>
+                  <Text style={s.billMeta}>{bill.subcategory || bill.category} · due {ordinal(bill.dayOfMonth)}{bill.autoPay !== false ? ' · auto' : ''}</Text>
                 </View>
                 <Text style={[s.billAmount, isSkipped && { color: colors.textLight, textDecorationLine: 'line-through' }]}>
                   ${bill.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -193,6 +197,16 @@ export default function BillsScreen({ categories, bills, onAdd, onUpdate, onDele
                   <Text style={s.pickerText}>{ordinal(dayOfMonth)}</Text>
                   <Text style={s.chevron}>›</Text>
                 </TouchableOpacity>
+
+                <View style={[s.pickerRow, { justifyContent: 'space-between' }]}>
+                  <Text style={s.pickerText}>Auto-pay</Text>
+                  <Switch
+                    value={autoPay}
+                    onValueChange={setAutoPay}
+                    trackColor={{ false: colors.borderMuted, true: colors.bill }}
+                    thumbColor={colors.surface}
+                  />
+                </View>
 
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
                   <TouchableOpacity style={[layout.modalBtn, { backgroundColor: colors.surfaceMuted, flex: 1 }]} onPress={closeForm}>
